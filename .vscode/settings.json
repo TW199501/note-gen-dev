@@ -28,9 +28,9 @@
     },
     // 搜索排除 - 提高性能
     "search.exclude": {
-        "**/*.code-search": false,
-        "**/bower_components": false,
-        "**/node_modules": false
+        "**/*.code-search": true,
+        "**/bower_components": true,
+        "**/node_modules": true
     },
     // Cursor 擴展同步設置 - 注意：Cursor 目前不支援 cursor.sync.* 配置項
     // 如需控制同步，請使用 files.exclude、files.watcherExclude 和 cursor.general.globalCursorIgnoreList
