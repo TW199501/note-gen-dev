@@ -1,8 +1,8 @@
 'use client'
-import { 
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
+import {
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,341 +21,341 @@ import { toast } from "@/hooks/use-toast"
 import { fetch } from "@tauri-apps/plugin-http"
 
 interface ModelCardProps {
-  modelConfig: ModelConfig
-  aiConfig: AiConfig
-  onUpdate: (modelId: string, field: keyof ModelConfig, value: any) => void
-  onDelete: (modelId: string) => void
+    modelConfig: ModelConfig
+    aiConfig: AiConfig
+    onUpdate: (modelId: string, field: keyof ModelConfig, value: any) => void
+    onDelete: (modelId: string) => void
 }
 
 export default function ModelCard({ modelConfig, aiConfig, onUpdate, onDelete }: ModelCardProps) {
-  const t = useTranslations('settings.ai')
-  const [checkState, setCheckState] = useState<'ok' | 'error' | 'checking' | 'init'>('init')
-  const abortControllerRef = useRef<AbortController | null>(null)
+    const t = useTranslations('settings.ai')
+    const [checkState, setCheckState] = useState<'ok' | 'error' | 'checking' | 'init'>('init')
+    const abortControllerRef = useRef<AbortController | null>(null)
 
-  const handleCheck = async () => {
-    // 取消之前的请求
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
+    const handleCheck = async () => {
+        // 取消之前的请求
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort()
+        }
+
+        setCheckState('checking')
+        abortControllerRef.current = new AbortController()
+
+        try {
+            const aiStatus = await checkModelStatus(modelConfig, aiConfig, abortControllerRef.current.signal)
+            if (aiStatus) {
+                setCheckState('ok')
+                toast({
+                    description: t('connectionSuccess'),
+                    className: 'border-green-500 bg-green-50 text-green-800'
+                })
+            } else {
+                setCheckState('error')
+            }
+        } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+                return
+            }
+            setCheckState('error')
+        }
     }
-    
-    setCheckState('checking')
-    abortControllerRef.current = new AbortController()
-    
-    try {
-      const aiStatus = await checkModelStatus(modelConfig, aiConfig, abortControllerRef.current.signal)
-      if (aiStatus) {
-        setCheckState('ok')
-        toast({
-          description: t('connectionSuccess'),
-          className: 'border-green-500 bg-green-50 text-green-800'
-        })
-      } else {
-        setCheckState('error')
-      }
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        return
-      }
-      setCheckState('error')
+
+    const checkModelStatus = async (model: ModelConfig, aiConfig: AiConfig, signal?: AbortSignal) => {
+        try {
+            if (!model.model || !aiConfig.baseURL) return false
+
+            const fullAiConfig: AiConfig = {
+                ...aiConfig,
+                model: model.model,
+                modelType: model.modelType,
+                temperature: model.temperature,
+                topP: model.topP,
+                voice: model.voice,
+                enableStream: model.enableStream
+            }
+
+            switch (model.modelType) {
+                case 'rerank':
+                    const query = 'Apple'
+                    const documents = ["apple", "banana", "fruit", "vegetable"]
+                    const response = await fetch(aiConfig.baseURL + '/rerank', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${aiConfig.apiKey}`,
+                            'Origin': "",
+                            ...(aiConfig.customHeaders || {})
+                        },
+                        body: JSON.stringify({
+                            model: model.model,
+                            query,
+                            documents
+                        }),
+                        signal
+                    })
+                    if (!response.ok) {
+                        throw new Error(t('errors.rerankRequestFailed', { status: response.status, statusText: response.statusText }))
+                    }
+                    const rerankData = await response.json()
+                    if (!rerankData || !rerankData.results) {
+                        throw new Error(t('errors.rerankResultFormatError'))
+                    }
+                    return true
+
+                case 'embedding':
+                    const testText = t('errors.testText')
+                    const embeddingData = await fetch(aiConfig.baseURL + '/embeddings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${aiConfig.apiKey}`,
+                            'Origin': "",
+                            ...(aiConfig.customHeaders || {})
+                        },
+                        body: JSON.stringify({
+                            model: model.model,
+                            input: testText,
+                            encoding_format: 'float'
+                        }),
+                        signal
+                    })
+                    if (!embeddingData.ok) {
+                        throw new Error(t('errors.embeddingRequestFailed', { status: embeddingData.status, statusText: embeddingData.statusText }))
+                    }
+                    const embeddingDataJson = await embeddingData.json()
+                    if (!embeddingDataJson || !embeddingDataJson.data || !embeddingDataJson.data[0] || !embeddingDataJson.data[0].embedding) {
+                        throw new Error(t('errors.embeddingResultFormatError'))
+                    }
+                    return true
+
+                case 'tts':
+                    const testAudioText = t('errors.testAudioText')
+                    const ttsResponse = await fetch(aiConfig.baseURL + '/audio/speech', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${aiConfig.apiKey}`,
+                            'Origin': "",
+                            ...(aiConfig.customHeaders || {})
+                        },
+                        body: JSON.stringify({
+                            model: model.model,
+                            input: testAudioText,
+                            voice: model.voice || 'alloy'
+                        }),
+                        signal
+                    })
+                    if (!ttsResponse.ok) {
+                        throw new Error(t('errors.ttsRequestFailed', { status: ttsResponse.status, statusText: ttsResponse.statusText }))
+                    }
+                    const ttsContentType = ttsResponse.headers.get('content-type')
+                    if (!ttsContentType || !ttsContentType.includes('audio')) {
+                        throw new Error(t('errors.ttsResultFormatError'))
+                    }
+                    return true
+
+                case 'stt':
+                    // STT 测试：只检查 API 端点连通性
+                    // 发送一个简单的测试请求，不验证具体返回内容
+                    // 因为空音频文件可能导致服务器ffmpeg解析失败，但这不代表模型不可用
+                    const testAudioBlob = new Blob([new Uint8Array(100)], { type: 'audio/webm' })
+                    const sttFormData = new FormData()
+                    sttFormData.append('file', testAudioBlob, 'test.webm')
+                    sttFormData.append('model', model.model)
+
+                    const sttResponse = await fetch(aiConfig.baseURL + '/audio/transcriptions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${aiConfig.apiKey}`,
+                            ...(aiConfig.customHeaders || {})
+                        },
+                        body: sttFormData,
+                        signal
+                    })
+
+                    // 对于STT，只要API响应了（即使是400错误），就认为连接成功
+                    // 400错误通常是因为测试音频无效，但说明API端点是可达的
+                    if (sttResponse.status === 401 || sttResponse.status === 403) {
+                        // 认证错误才是真正的失败
+                        throw new Error(t('errors.sttAuthFailed', { status: sttResponse.status }))
+                    }
+
+                    // 其他情况（包括200成功和400音频解析失败）都认为连接成功
+                    return true
+
+                default:
+                    const openai = await createOpenAIClient(fullAiConfig)
+                    await openai.chat.completions.create({
+                        model: model.model,
+                        messages: [{
+                            role: 'user' as const,
+                            content: 'Hello'
+                        }],
+                        stream: model.enableStream !== false,
+                    })
+                    return true
+            }
+        } catch (error) {
+            toast({
+                description: error instanceof Error ? error.message : 'Error',
+                variant: 'destructive'
+            })
+            return false
+        }
     }
-  }
 
-  const checkModelStatus = async (model: ModelConfig, aiConfig: AiConfig, signal?: AbortSignal) => {
-    try {
-      if (!model.model || !aiConfig.baseURL) return false
-
-      const fullAiConfig: AiConfig = {
-        ...aiConfig,
-        model: model.model,
-        modelType: model.modelType,
-        temperature: model.temperature,
-        topP: model.topP,
-        voice: model.voice,
-        enableStream: model.enableStream
-      }
-
-      switch (model.modelType) {
-        case 'rerank':
-          const query = 'Apple'
-          const documents = ["apple","banana","fruit","vegetable"]
-          const response = await fetch(aiConfig.baseURL + '/rerank', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${aiConfig.apiKey}`,
-              'Origin': "",
-              ...(aiConfig.customHeaders || {})
-            },
-            body: JSON.stringify({
-              model: model.model,
-              query,
-              documents
-            }),
-            signal
-          })
-          if (!response.ok) {
-            throw new Error(`重排序请求失败: ${response.status} ${response.statusText}`)
-          }
-          const rerankData = await response.json()
-          if (!rerankData || !rerankData.results) {
-            throw new Error('重排序结果格式不正确')
-          }
-          return true
-
-        case 'embedding':
-          const testText = '测试文本'
-          const embeddingData = await fetch(aiConfig.baseURL + '/embeddings', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${aiConfig.apiKey}`,
-              'Origin': "",
-              ...(aiConfig.customHeaders || {})
-            },
-            body: JSON.stringify({
-              model: model.model,
-              input: testText,
-              encoding_format: 'float'
-            }),
-            signal
-          })
-          if (!embeddingData.ok) {
-            throw new Error(`嵌入请求失败: ${embeddingData.status} ${embeddingData.statusText}`)
-          }
-          const embeddingDataJson = await embeddingData.json()
-          if (!embeddingDataJson || !embeddingDataJson.data || !embeddingDataJson.data[0] || !embeddingDataJson.data[0].embedding) {
-            throw new Error('嵌入结果格式不正确')
-          }
-          return true
-
-        case 'tts':
-          const testAudioText = '测试音频生成'
-          const ttsResponse = await fetch(aiConfig.baseURL + '/audio/speech', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${aiConfig.apiKey}`,
-              'Origin': "",
-              ...(aiConfig.customHeaders || {})
-            },
-            body: JSON.stringify({
-              model: model.model,
-              input: testAudioText,
-              voice: model.voice || 'alloy'
-            }),
-            signal
-          })
-          if (!ttsResponse.ok) {
-            throw new Error(`TTS请求失败: ${ttsResponse.status} ${ttsResponse.statusText}`)
-          }
-          const ttsContentType = ttsResponse.headers.get('content-type')
-          if (!ttsContentType || !ttsContentType.includes('audio')) {
-            throw new Error('TTS模型返回格式不正确')
-          }
-          return true
-
-        case 'stt':
-          // STT 测试：只检查 API 端点连通性
-          // 发送一个简单的测试请求，不验证具体返回内容
-          // 因为空音频文件可能导致服务器ffmpeg解析失败，但这不代表模型不可用
-          const testAudioBlob = new Blob([new Uint8Array(100)], { type: 'audio/webm' })
-          const sttFormData = new FormData()
-          sttFormData.append('file', testAudioBlob, 'test.webm')
-          sttFormData.append('model', model.model)
-          
-          const sttResponse = await fetch(aiConfig.baseURL + '/audio/transcriptions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${aiConfig.apiKey}`,
-              ...(aiConfig.customHeaders || {})
-            },
-            body: sttFormData,
-            signal
-          })
-          
-          // 对于STT，只要API响应了（即使是400错误），就认为连接成功
-          // 400错误通常是因为测试音频无效，但说明API端点是可达的
-          if (sttResponse.status === 401 || sttResponse.status === 403) {
-            // 认证错误才是真正的失败
-            throw new Error(`STT认证失败 (${sttResponse.status})`)
-          }
-          
-          // 其他情况（包括200成功和400音频解析失败）都认为连接成功
-          return true
-
-        default:
-          const openai = await createOpenAIClient(fullAiConfig)
-          await openai.chat.completions.create({
-            model: model.model,
-            messages: [{
-              role: 'user' as const,
-              content: 'Hello'
-            }],
-            stream: model.enableStream !== false,
-          })
-          return true
-      }
-    } catch (error) {
-      toast({
-        description: error instanceof Error ? error.message : 'Error',
-        variant: 'destructive'
-      })
-      return false
+    const renderCheckIcon = () => {
+        switch (checkState) {
+            case 'ok':
+                return <CircleCheck className="text-green-500 size-4" />
+            case 'error':
+                return <CircleX className="text-red-500 size-4" />
+            case 'checking':
+                return <LoaderCircle className="animate-spin size-4" />
+            default:
+                return null
+        }
     }
-  }
 
-  const renderCheckIcon = () => {
-    switch (checkState) {
-      case 'ok':
-        return <CircleCheck className="text-green-500 size-4" />
-      case 'error':
-        return <CircleX className="text-red-500 size-4" />
-      case 'checking':
-        return <LoaderCircle className="animate-spin size-4" />
-      default:
-        return null
-    }
-  }
-
-  return (
-    <AccordionItem value={modelConfig.id} className="border rounded-lg">
-      <div className="flex items-center justify-between flex-wrap">
-        <div className="flex-1">
-          <AccordionTrigger className="w-full px-4 py-4 hover:no-underline">
-            <div className="flex items-center">
-              <span className="text-base font-semibold">
-                {modelConfig.model || t('newModel')}
-              </span>
-              <Badge variant="secondary" className="ml-2">
-                {t(`modelType.${modelConfig.modelType}`)}
-              </Badge>
-            </div>
-          </AccordionTrigger>
-        </div>
-        <div className="flex items-center justify-end gap-2 p-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCheck}
-            disabled={!modelConfig.model || checkState === 'checking'}
-          >
-            {renderCheckIcon()}
-            {t('checkConnection')}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onDelete(modelConfig.id)}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </div>
-      </div>      
-      <AccordionContent className="px-4 pb-4 space-y-4">
-        {/* 模型选择 */}
-        <div className="space-y-2">
-          <Label>{t('model')}</Label>
-          <ModelSelect
-            model={modelConfig.model}
-            setModel={(model) => onUpdate(modelConfig.id, 'model', model)}
-            aiConfig={aiConfig}
-          />
-        </div>
-
-        {/* 模型类型 */}
-        <div className="space-y-2">
-          <Label>{t('modelType.title')}</Label>
-          <RadioGroup
-            value={modelConfig.modelType}
-            onValueChange={(value) => onUpdate(modelConfig.id, 'modelType', value as ModelType)}
-            className="flex flex-wrap gap-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="chat" id={`chat-${modelConfig.id}`} />
-              <Label htmlFor={`chat-${modelConfig.id}`}>{t('modelType.chat')}</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="tts" id={`tts-${modelConfig.id}`} />
-              <Label htmlFor={`tts-${modelConfig.id}`}>{t('modelType.tts')}</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="stt" id={`stt-${modelConfig.id}`} />
-              <Label htmlFor={`stt-${modelConfig.id}`}>{t('modelType.stt')}</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="embedding" id={`embedding-${modelConfig.id}`} />
-              <Label htmlFor={`embedding-${modelConfig.id}`}>{t('modelType.embedding')}</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="rerank" id={`rerank-${modelConfig.id}`} />
-              <Label htmlFor={`rerank-${modelConfig.id}`}>{t('modelType.rerank')}</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        {/* Chat模型的特殊配置 */}
-        {modelConfig.modelType === 'chat' && (
-          <>
-            <div className="space-y-2">
-              <Label>Temperature</Label>
-              <div className="flex gap-2 items-center">
-                <Slider
-                  className="flex-1"
-                  value={[modelConfig.temperature || 0.7]}
-                  max={2}
-                  step={0.01}
-                  onValueChange={(value) => onUpdate(modelConfig.id, 'temperature', value[0])}
-                />
-                <span className="text-sm text-muted-foreground w-12">
-                  {(modelConfig.temperature || 0.7).toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Top P</Label>
-              <div className="flex gap-2 items-center">
-                <Slider
-                  className="flex-1"
-                  value={[modelConfig.topP || 1.0]}
-                  max={1}
-                  min={0}
-                  step={0.01}
-                  onValueChange={(value) => onUpdate(modelConfig.id, 'topP', value[0])}
-                />
-                <span className="text-sm text-muted-foreground w-12">
-                  {(modelConfig.topP || 1.0).toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>{t('enableStream')}</Label>
-                <div className="text-sm text-muted-foreground">
-                  {t('enableStreamDesc')}
+    return (
+        <AccordionItem value={modelConfig.id} className="border rounded-lg">
+            <div className="flex items-center justify-between flex-wrap">
+                <div className="flex-1">
+                    <AccordionTrigger className="w-full px-4 py-4 hover:no-underline">
+                        <div className="flex items-center">
+                            <span className="text-base font-semibold">
+                                {modelConfig.model || t('newModel')}
+                            </span>
+                            <Badge variant="secondary" className="ml-2">
+                                {t(`modelType.${modelConfig.modelType}`)}
+                            </Badge>
+                        </div>
+                    </AccordionTrigger>
                 </div>
-              </div>
-              <Switch
-                checked={modelConfig.enableStream !== false}
-                onCheckedChange={(checked) => onUpdate(modelConfig.id, 'enableStream', checked)}
-              />
+                <div className="flex items-center justify-end gap-2 p-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCheck}
+                        disabled={!modelConfig.model || checkState === 'checking'}
+                    >
+                        {renderCheckIcon()}
+                        {t('checkConnection')}
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDelete(modelConfig.id)}
+                    >
+                        <Trash2 className="size-4" />
+                    </Button>
+                </div>
             </div>
-          </>
-        )}
+            <AccordionContent className="px-4 pb-4 space-y-4">
+                {/* 模型选择 */}
+                <div className="space-y-2">
+                    <Label>{t('model')}</Label>
+                    <ModelSelect
+                        model={modelConfig.model}
+                        setModel={(model) => onUpdate(modelConfig.id, 'model', model)}
+                        aiConfig={aiConfig}
+                    />
+                </div>
 
-        {/* TTS模型的特殊配置 */}
-        {modelConfig.modelType === 'tts' && (
-          <div className="space-y-2">
-            <Label>{t('voice')}</Label>
-            <Input
-              value={modelConfig.voice || ''}
-              onChange={(e) => onUpdate(modelConfig.id, 'voice', e.target.value)}
-              placeholder={t('voicePlaceholder')}
-            />
-          </div>
-        )}
-      </AccordionContent>
-    </AccordionItem>
-  )
+                {/* 模型类型 */}
+                <div className="space-y-2">
+                    <Label>{t('modelType.title')}</Label>
+                    <RadioGroup
+                        value={modelConfig.modelType}
+                        onValueChange={(value) => onUpdate(modelConfig.id, 'modelType', value as ModelType)}
+                        className="flex flex-wrap gap-4"
+                    >
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="chat" id={`chat-${modelConfig.id}`} />
+                            <Label htmlFor={`chat-${modelConfig.id}`}>{t('modelType.chat')}</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="tts" id={`tts-${modelConfig.id}`} />
+                            <Label htmlFor={`tts-${modelConfig.id}`}>{t('modelType.tts')}</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="stt" id={`stt-${modelConfig.id}`} />
+                            <Label htmlFor={`stt-${modelConfig.id}`}>{t('modelType.stt')}</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="embedding" id={`embedding-${modelConfig.id}`} />
+                            <Label htmlFor={`embedding-${modelConfig.id}`}>{t('modelType.embedding')}</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="rerank" id={`rerank-${modelConfig.id}`} />
+                            <Label htmlFor={`rerank-${modelConfig.id}`}>{t('modelType.rerank')}</Label>
+                        </div>
+                    </RadioGroup>
+                </div>
+
+                {/* Chat模型的特殊配置 */}
+                {modelConfig.modelType === 'chat' && (
+                    <>
+                        <div className="space-y-2">
+                            <Label>Temperature</Label>
+                            <div className="flex gap-2 items-center">
+                                <Slider
+                                    className="flex-1"
+                                    value={[modelConfig.temperature || 0.7]}
+                                    max={2}
+                                    step={0.01}
+                                    onValueChange={(value) => onUpdate(modelConfig.id, 'temperature', value[0])}
+                                />
+                                <span className="text-sm text-muted-foreground w-12">
+                                    {(modelConfig.temperature || 0.7).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Top P</Label>
+                            <div className="flex gap-2 items-center">
+                                <Slider
+                                    className="flex-1"
+                                    value={[modelConfig.topP || 1.0]}
+                                    max={1}
+                                    min={0}
+                                    step={0.01}
+                                    onValueChange={(value) => onUpdate(modelConfig.id, 'topP', value[0])}
+                                />
+                                <span className="text-sm text-muted-foreground w-12">
+                                    {(modelConfig.topP || 1.0).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label>{t('enableStream')}</Label>
+                                <div className="text-sm text-muted-foreground">
+                                    {t('enableStreamDesc')}
+                                </div>
+                            </div>
+                            <Switch
+                                checked={modelConfig.enableStream !== false}
+                                onCheckedChange={(checked) => onUpdate(modelConfig.id, 'enableStream', checked)}
+                            />
+                        </div>
+                    </>
+                )}
+
+                {/* TTS模型的特殊配置 */}
+                {modelConfig.modelType === 'tts' && (
+                    <div className="space-y-2">
+                        <Label>{t('voice')}</Label>
+                        <Input
+                            value={modelConfig.voice || ''}
+                            onChange={(e) => onUpdate(modelConfig.id, 'voice', e.target.value)}
+                            placeholder={t('voicePlaceholder')}
+                        />
+                    </div>
+                )}
+            </AccordionContent>
+        </AccordionItem>
+    )
 }

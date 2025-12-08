@@ -1,4 +1,4 @@
-# NoteGen 項目清理腳本
+# NoteGen 項目清理腳本 語法.\scripts\clean.ps1
 # 用途：清理所有構建產物和依賴
 
 $ErrorActionPreference = "Stop"
