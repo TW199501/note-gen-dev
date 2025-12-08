@@ -683,12 +683,7 @@
                 "embeddingResultFormatError": "Embedding result format incorrect",
                 "ttsRequestFailed": "TTS request failed: {status} {statusText}",
                 "ttsResultFormatError": "TTS model returned incorrect format",
-                "sttAuthFailed": "STT authentication failed ({status})",
-                "testText": "Test text",
-                "testAudioText": "Test audio generation",
-                "testQuery": "Test query",
-                "testDocument1": "This is a test document",
-                "testDocument2": "This is another test document"
+                "sttAuthFailed": "STT authentication failed ({status})"
             },
             "voice": "Voice Type",
             "voiceDesc": "Specify the voice type for audio models, such as 'alloy', 'echo', 'fable', etc.",

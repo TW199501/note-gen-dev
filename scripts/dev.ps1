@@ -1,29 +1,29 @@
-# NoteGen 項目開發模式啟動腳本
-# 用途：啟動開發服務器
+# NoteGen Development Mode Script
+# Purpose: Start development server
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  啟動 NoteGen 開發模式" -ForegroundColor Cyan
+Write-Host "  Starting NoteGen Development Mode" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
-# 檢查依賴是否已安裝
+# Check if dependencies are installed
 if (-not (Test-Path "node_modules")) {
-    Write-Host "[WARN]  未檢測到 node_modules，正在安裝依賴..." -ForegroundColor Yellow
+    Write-Host "[WARN]  node_modules not found, installing dependencies..." -ForegroundColor Yellow
     pnpm install
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "[FAIL] 依賴安裝失敗" -ForegroundColor Red
+        Write-Host "[FAIL] Dependency installation failed" -ForegroundColor Red
         exit 1
     }
 }
 
-Write-Host "啟動開發服務器..." -ForegroundColor Yellow
-Write-Host "  執行: pnpm tauri dev" -ForegroundColor Gray
+Write-Host "Starting development server..." -ForegroundColor Yellow
+Write-Host "  Executing: pnpm tauri dev" -ForegroundColor Gray
 Write-Host ""
 
 pnpm tauri dev
