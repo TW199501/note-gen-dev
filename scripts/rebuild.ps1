@@ -47,12 +47,13 @@ if (-not $SkipClean) {
         # 先嘗試正常的 cargo clean
         $cleanSuccess = $false
         try {
-            $cleanOutput = cargo clean 2>&1 | Out-String
+            $null = cargo clean 2>&1
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "  [OK] Rust 構建產物已清理" -ForegroundColor Green
                 $cleanSuccess = $true
             }
-        } catch {
+        }
+        catch {
             # cargo clean 失敗，繼續嘗試手動清理
         }
         
@@ -81,7 +82,8 @@ if (-not $SkipClean) {
                         Remove-Item -Recurse -Force $fullPath -ErrorAction Stop
                         Write-Host "  [OK] 已刪除: $dir" -ForegroundColor Green
                         $removedAny = $true
-                    } catch {
+                    }
+                    catch {
                         Write-Host "  [WARN]  無法刪除: $dir (可能被占用)" -ForegroundColor Yellow
                     }
                 }
@@ -89,7 +91,8 @@ if (-not $SkipClean) {
             
             if ($removedAny) {
                 Write-Host "  [OK] 部分清理完成" -ForegroundColor Green
-            } else {
+            }
+            else {
                 Write-Host "  [WARN]  無法清理 Rust 構建產物（文件被占用）" -ForegroundColor Yellow
                 Write-Host "     解決方法：" -ForegroundColor DarkGray
                 Write-Host "     1. 關閉文件管理器（如果正在訪問該目錄）" -ForegroundColor DarkGray
@@ -104,7 +107,8 @@ if (-not $SkipClean) {
     
     Write-Host "  [OK] 構建產物已清理" -ForegroundColor Green
     Write-Host ""
-} else {
+}
+else {
     Write-Host "[1/5] 跳過清理步驟" -ForegroundColor Gray
     Write-Host ""
 }
@@ -123,7 +127,8 @@ if (-not $SkipInstall) {
     
     Write-Host "  [OK] 依賴安裝完成" -ForegroundColor Green
     Write-Host ""
-} else {
+}
+else {
     Write-Host "[2/5] 跳過依賴安裝" -ForegroundColor Gray
     Write-Host ""
 }
@@ -142,7 +147,8 @@ if (-not $SkipBuild) {
     
     Write-Host "  [OK] 前端構建完成" -ForegroundColor Green
     Write-Host ""
-} else {
+}
+else {
     Write-Host "[3/5] 跳過前端構建" -ForegroundColor Gray
     Write-Host ""
 }
@@ -162,7 +168,8 @@ if (-not $SkipTauri) {
     
     Write-Host "  [OK] Tauri 構建完成" -ForegroundColor Green
     Write-Host ""
-} else {
+}
+else {
     Write-Host "[4/5] 跳過 Tauri 構建" -ForegroundColor Gray
     Write-Host ""
 }
@@ -200,7 +207,8 @@ foreach ($output in $buildOutputs) {
             $size = [math]::Round($file.Length / 1MB, 2)
             Write-Host "     - $($file.Name) ($size MB)" -ForegroundColor Gray
         }
-    } else {
+    }
+    else {
         Write-Host "  [WARN]  $($output.Name): 未找到" -ForegroundColor Yellow
     }
 }
