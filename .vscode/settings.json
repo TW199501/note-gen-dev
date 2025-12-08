@@ -1,125 +1,115 @@
 {
-  // Todo-MD 插件配置
-  "todomd.defaultFile": "${workspaceFolder}/todo.md",
-  "todomd.activatePattern": "**/{todo,someday,todo.archive}.md",
-  
-  // 文件同步設置 - 排除大文件和不需要同步的文件夾
-  "files.exclude": {
-    "**/node_modules": true,
-    "**/dist": true,
-    "**/.next": true,
-    "**/target": true,
-    "**/*.lock": true,
-    "**/pnpm-lock.yaml": true,
-    "**/Cargo.lock": true,
-    "**/public/dist": true,
-    "**/src-tauri/target": true,
-    "**/src-tauri/gen": true
-  },
-  
-  // 文件監視排除 - 減少同步負擔
-  "files.watcherExclude": {
-    "**/node_modules/**": true,
-    "**/dist/**": true,
-    "**/.next/**": true,
-    "**/target/**": true,
-    "**/public/dist/**": true,
-    "**/.git/**": true,
-    "**/src-tauri/target/**": true,
-    "**/src-tauri/gen/**": true
-  },
-  
-  // 搜索排除 - 提高性能
-  "search.exclude": {
-    "**/node_modules": true,
-    "**/dist": true,
-    "**/.next": true,
-    "**/target": true,
-    "**/public/dist": true,
-    "**/src-tauri/target": true
-  },
-  
-  // Cursor 擴展同步設置 - 注意：Cursor 目前不支援 cursor.sync.* 配置項
-  // 如需控制同步，請使用 files.exclude、files.watcherExclude 和 cursor.general.globalCursorIgnoreList
-  // "cursor.sync.enabled": false,  // 無效的配置項，已移除
-  // "cursor.sync.exclude": [       // 無效的配置項，已移除
-  //   "**/node_modules/**",
-  //   "**/dist/**",
-  //   "**/.next/**",
-  //   "**/target/**",
-  //   "**/public/dist/**",
-  //   "**/*.lock",
-  //   "**/pnpm-lock.yaml",
-  //   "**/Cargo.lock"
-  // ],
-  
-  // 文件大小限制設置
-  // 注意：files.maxMemoryForLargeFilesMB 是 VS Code 的配置項，Cursor IDE 不支持
-  // 如需處理大文件，請通過 Cursor Settings UI 調整相關設置
-  // "files.maxMemoryForLargeFilesMB": 4096,  // 無效的配置項，已移除
-  
-  // 工具欄位置設置 - 移到左邊
-  "workbench.activityBar.location": "default",
-  "workbench.sideBar.location": "left",
-  
-  // Cursor 設置
-  // 注意：以下配置項可能已過時或無效，已註釋
-  // "cursor.cmdk.useThemedDiffBackground": true,  // 無效的配置項
-  // "cursor.composer.cmdPFilePicker": true,  // 無效的配置項
-  // "cursor.composer.collapsePaneInputBoxPills": true,  // 無效的配置項
-  // "cursor.composer.queueMessageDefaultBehavior": "queue",  // 無效的配置項
-  // "cursor.composer.shouldAutoAcceptDiffs": true,  // 無效的配置項
-  // "cursor.composer.shouldAutoSaveNonAgent": true,  // 無效的配置項
-  // 提示：Cursor 的 Composer 和 CmdK 設置應通過 Cursor Settings UI 配置，而非 settings.json
-  
-  // Cursor General 設置
-  "cursor.general.disableHttp1Sse": false,
-  "cursor.general.disableHttp2": false,
-  "cursor.general.enableShadowWorkspace": false,
-  "cursor.general.gitGraphIndexing": "default",
-  
-  // Cursor 全局忽略列表 - 保護敏感文件
-  "cursor.general.globalCursorIgnoreList": [
-    "**/.env",
-    "**/.env.*",
-    "**/credentials.json",
-    "**/credentials.*.json",
-    "**/secret.json",
-    "**/secrets.json",
-    "**/*.key",
-    "**/*.pem",
-    "**/*.pfx",
-    "**/*.p12",
-    "**/*.crt",
-    "**/*.cer",
-    "**/id_rsa"
-  ],
-  
-  // Bash IDE 配置
-  "bashIde.explainshellEndpoint": "",
-  "bashIde.shellcheckPath": "shellcheck",
-  "bashIde.shellcheckRun": "onSave",
-  "bashIde.shfmtPath": "shfmt",
-  "bashIde.shfmtArguments": "-i 2 -ci",
-  "bashIde.enableSourceErrorDiagnostics": true,
-  "bashIde.globPattern": "**/*.{sh,bash}",
-  
-  // Shellscript 格式化設置
-  "[shellscript]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "mads-hartmann.bash-ide"
-  },
-  
-  // 其他設置
-  "files.associations": {
-    "*.md": "markdown",
-    "*.sh": "shellscript",
-    "*.bash": "shellscript"
-  },
-  "todomd.webview.showTaskDetails": true,
-  
-  // SCSS 語法檢查器設置 - 忽略 Tailwind CSS 指令的警告
-  "scss.lint.unknownAtRules": "ignore",
-  "css.lint.unknownAtRules": "ignore"
+    // Todo-MD 插件配置
+    "todomd.defaultFile": "${workspaceFolder}/todo.md",
+    "todomd.activatePattern": "**/{todo,someday,todo.archive}.md",
+    // 文件同步設置 - 排除大文件和不需要同步的文件夾
+    "files.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/.next": true,
+        "**/target": true,
+        "**/*.lock": true,
+        "**/pnpm-lock.yaml": true,
+        "**/Cargo.lock": true,
+        "**/public/dist": true,
+        "**/src-tauri/target": true,
+        "**/src-tauri/gen": true
+    },
+    // 文件監視排除 - 減少同步負擔
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/dist/**": true,
+        "**/.next/**": true,
+        "**/target/**": true,
+        "**/public/dist/**": true,
+        "**/.git/**": true,
+        "**/src-tauri/target/**": true,
+        "**/src-tauri/gen/**": true
+    },
+    // 搜索排除 - 提高性能
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/.next": true,
+        "**/target": true,
+        "**/public/dist": true,
+        "**/src-tauri/target": true
+    },
+    // Cursor 擴展同步設置 - 注意：Cursor 目前不支援 cursor.sync.* 配置項
+    // 如需控制同步，請使用 files.exclude、files.watcherExclude 和 cursor.general.globalCursorIgnoreList
+    // "cursor.sync.enabled": false,  // 無效的配置項，已移除
+    // "cursor.sync.exclude": [       // 無效的配置項，已移除
+    //   "**/node_modules/**",
+    //   "**/dist/**",
+    //   "**/.next/**",
+    //   "**/target/**",
+    //   "**/public/dist/**",
+    //   "**/*.lock",
+    //   "**/pnpm-lock.yaml",
+    //   "**/Cargo.lock"
+    // ],
+    // 文件大小限制設置
+    // 注意：files.maxMemoryForLargeFilesMB 是 VS Code 的配置項，Cursor IDE 不支持
+    // 如需處理大文件，請通過 Cursor Settings UI 調整相關設置
+    // "files.maxMemoryForLargeFilesMB": 4096,  // 無效的配置項，已移除
+    // 工具欄位置設置 - 移到左邊
+    "workbench.activityBar.location": "default",
+    "workbench.sideBar.location": "left",
+    // Cursor 設置
+    // 注意：以下配置項可能已過時或無效，已註釋
+    // "cursor.cmdk.useThemedDiffBackground": true,  // 無效的配置項
+    // "cursor.composer.cmdPFilePicker": true,  // 無效的配置項
+    // "cursor.composer.collapsePaneInputBoxPills": true,  // 無效的配置項
+    // "cursor.composer.queueMessageDefaultBehavior": "queue",  // 無效的配置項
+    // "cursor.composer.shouldAutoAcceptDiffs": true,  // 無效的配置項
+    // "cursor.composer.shouldAutoSaveNonAgent": true,  // 無效的配置項
+    // 提示：Cursor 的 Composer 和 CmdK 設置應通過 Cursor Settings UI 配置，而非 settings.json
+    // Cursor General 設置
+    "cursor.general.disableHttp1Sse": false,
+    "cursor.general.disableHttp2": false,
+    "cursor.general.enableShadowWorkspace": false,
+    "cursor.general.gitGraphIndexing": "default",
+    // Cursor 全局忽略列表 - 保護敏感文件
+    "cursor.general.globalCursorIgnoreList": [
+        "**/.env",
+        "**/.env.*",
+        "**/credentials.json",
+        "**/credentials.*.json",
+        "**/secret.json",
+        "**/secrets.json",
+        "**/*.key",
+        "**/*.pem",
+        "**/*.pfx",
+        "**/*.p12",
+        "**/*.crt",
+        "**/*.cer",
+        "**/id_rsa"
+    ],
+    // Bash IDE 配置
+    "bashIde.explainshellEndpoint": "",
+    "bashIde.shellcheckPath": "shellcheck",
+    "bashIde.shellcheckRun": "onSave",
+    "bashIde.shfmtPath": "shfmt",
+    "bashIde.shfmtArguments": [
+        "-i",
+        "2",
+        "-ci"
+    ],
+    "bashIde.enableSourceErrorDiagnostics": true,
+    "bashIde.globPattern": "**/*.{sh,bash}",
+    // Shellscript 格式化設置
+    "[shellscript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "mads-hartmann.bash-ide"
+    },
+    // 其他設置
+    "files.associations": {
+        "*.md": "markdown",
+        "*.sh": "shellscript",
+        "*.bash": "shellscript"
+    },
+    "todomd.webview.showTaskDetails": true,
+    // SCSS 語法檢查器設置 - 忽略 Tailwind CSS 指令的警告
+    "scss.lint.unknownAtRules": "ignore",
+    "css.lint.unknownAtRules": "ignore"
 }
-
