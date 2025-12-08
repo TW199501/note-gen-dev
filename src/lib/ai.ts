@@ -1,7 +1,7 @@
 import { toast } from "@/hooks/use-toast";
 import { Store } from "@tauri-apps/plugin-store";
 import OpenAI from 'openai';
-import { AiConfig } from "@/app/core/setting/config";
+import { AiConfig, ModelConfig } from "@/app/core/setting/config";
 import { fetch } from "@tauri-apps/plugin-http";
 
 /**
@@ -60,7 +60,7 @@ async function getPromptContent(): Promise<string> {
     if (currentPromptId) {
         const promptList = await store.get<Array<{ id: string, content: string }>>('promptList')
         if (promptList) {
-            const currentPrompt = promptList.find(prompt => prompt.id === currentPromptId)
+            const currentPrompt = promptList.find((prompt: { id: string, content: string }) => prompt.id === currentPromptId)
             if (currentPrompt && currentPrompt.content) {
                 promptContent = currentPrompt.content
             }
@@ -87,14 +87,14 @@ async function getAISettings(modelType?: string): Promise<AiConfig | undefined> 
         // 检查新的 models 数组结构
         if (config.models && config.models.length > 0) {
             // 首先尝试直接匹配模型ID
-            let targetModel = config.models.find(model => model.id === modelId)
+            let targetModel = config.models.find((model: ModelConfig) => model.id === modelId)
 
             // 如果没找到，尝试匹配组合键格式 ${config.key}-${model.id}
             if (!targetModel && typeof modelId === 'string' && modelId.includes('-')) {
                 const expectedPrefix = `${config.key}-`
                 if (modelId.startsWith(expectedPrefix)) {
                     const originalModelId = modelId.substring(expectedPrefix.length)
-                    targetModel = config.models.find(model => model.id === originalModelId)
+                    targetModel = config.models.find((model: ModelConfig) => model.id === originalModelId)
                 }
             }
 
@@ -192,7 +192,7 @@ async function getEmbeddingModelInfo() {
     for (const config of aiModelList) {
         // 检查新的 models 数组结构
         if (config.models && config.models.length > 0) {
-            const targetModel = config.models.find(model =>
+            const targetModel = config.models.find((model: ModelConfig) =>
                 model.id === embeddingModel && model.modelType === 'embedding'
             );
             if (targetModel) {
@@ -233,7 +233,7 @@ export async function getRerankModelInfo() {
     for (const config of aiModelList) {
         // 检查新的 models 数组结构
         if (config.models && config.models.length > 0) {
-            const targetModel = config.models.find(model =>
+            const targetModel = config.models.find((model: ModelConfig) =>
                 model.id === rerankModel && model.modelType === 'rerank'
             );
             if (targetModel) {
@@ -308,9 +308,10 @@ export async function checkRerankModelAvailable(): Promise<boolean> {
 /**
  * 请求嵌入向量
  * @param text 需要嵌入的文本
+ * @param retryCount 重試次數（內部使用）
  * @returns 嵌入向量结果，如果失败则返回null
  */
-export async function fetchEmbedding(text: string): Promise<number[] | null> {
+export async function fetchEmbedding(text: string, retryCount: number = 0): Promise<number[] | null> {
     try {
         if (text.length) {
             // 获取嵌入模型信息
@@ -327,33 +328,173 @@ export async function fetchEmbedding(text: string): Promise<number[] | null> {
                 throw new Error(errorMsg);
             }
 
-            // 发送嵌入请求
-            const response = await fetch(baseURL + '/embeddings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Origin': ""
-                },
-                body: JSON.stringify({
-                    model: model,
-                    input: text,
-                    encoding_format: 'float'
-                })
-            });
+            // 发送嵌入请求，設置連接超時為 60 秒（某些 API 可能需要更長時間）
+            // 使用 AbortController 設置整體請求超時為 120 秒
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 秒整體超時
 
-            if (!response.ok) {
-                const errorMsg = await getTranslation('ai.error.embeddingRequestFailed', { status: response.status.toString(), statusText: response.statusText });
-                throw new Error(errorMsg);
+            try {
+                const response = await fetch(baseURL + '/embeddings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Origin': ""
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        input: text,
+                        encoding_format: 'float'
+                    }),
+                    connectTimeout: 60000, // 60 秒連接超時
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    // 處理 429 (Rate Limit) 錯誤：重試機制
+                    if (response.status === 429) {
+                        const maxRetries = 3;
+                        if (retryCount < maxRetries) {
+                            // 從響應頭獲取重試等待時間，默認 5 秒
+                            const retryAfter = response.headers.get('Retry-After');
+                            const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : (retryCount + 1) * 5000;
+
+                            // 等待後重試
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                            return fetchEmbedding(text, retryCount + 1);
+                        } else {
+                            const errorMsg = await getTranslation('ai.error.embeddingRequestFailed', {
+                                status: response.status.toString(),
+                                statusText: 'Rate limit exceeded, max retries reached'
+                            });
+                            if (typeof window !== 'undefined') {
+                                (window as any).__lastEmbeddingError = errorMsg;
+                            }
+                            throw new Error(errorMsg);
+                        }
+                    }
+
+                    // 處理 403 錯誤：區分 API key 錯誤和速率限制
+                    if (response.status === 403) {
+                        // 嘗試讀取響應體以判斷錯誤類型
+                        let errorBody: any = null;
+                        try {
+                            const responseText = await response.text();
+                            if (responseText) {
+                                try {
+                                    errorBody = JSON.parse(responseText);
+                                } catch {
+                                    errorBody = { message: responseText };
+                                }
+                            }
+                        } catch {
+                            // 無法讀取響應體，繼續處理
+                        }
+
+                        // 檢查是否是 API key 相關錯誤
+                        const errorMessage = errorBody?.error?.message || errorBody?.message || errorBody?.error || '';
+                        const errorMessageLower = errorMessage.toLowerCase();
+                        const isApiKeyError = errorMessage && (
+                            errorMessageLower.includes('api key') ||
+                            errorMessageLower.includes('apikey') ||
+                            errorMessageLower.includes('invalid key') ||
+                            errorMessageLower.includes('unauthorized') ||
+                            errorMessageLower.includes('authentication') ||
+                            errorMessageLower.includes('permission denied') ||
+                            errorMessageLower.includes('invalid api') ||
+                            errorMessageLower.includes('api key is invalid') ||
+                            errorMessageLower.includes('api key invalid')
+                        );
+
+                        // 如果是 API key 錯誤，立即報錯，不重試
+                        if (isApiKeyError) {
+                            const apiKeyErrorMsg = await getTranslation('ai.error.embeddingApiKeyInvalid');
+                            if (typeof window !== 'undefined') {
+                                (window as any).__lastEmbeddingError = apiKeyErrorMsg;
+                            }
+                            // 顯示錯誤提示
+                            toast({
+                                title: await getTranslation('ai.error.title'),
+                                description: apiKeyErrorMsg,
+                                variant: 'destructive',
+                            });
+                            throw new Error(apiKeyErrorMsg);
+                        }
+
+                        // 如果不是 API key 錯誤，可能是速率限制，進行重試
+                        const maxRetries = 3;
+                        if (retryCount < maxRetries) {
+                            // 等待時間遞增：5秒、10秒、15秒
+                            const waitTime = (retryCount + 1) * 5000;
+                            const waitingMsg = await getTranslation('ai.error.embeddingRateLimitWaiting', {
+                                waitTime: (waitTime / 1000).toString(),
+                                retryCount: (retryCount + 1).toString(),
+                                maxRetries: maxRetries.toString()
+                            });
+
+                            // 顯示等待提示（每次重試都顯示，讓用戶知道正在等待）
+                            toast({
+                                title: await getTranslation('ai.error.embeddingRateLimitTitle'),
+                                description: waitingMsg,
+                                variant: 'default',
+                            });
+
+                            // 等待後重試
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                            return fetchEmbedding(text, retryCount + 1);
+                        } else {
+                            // 達到最大重試次數，可能是 API key 問題或持續的速率限制
+                            // 如果重試多次後仍然失敗，更可能是 API key 問題
+                            const errorMsg = await getTranslation('ai.error.embeddingRequestFailed403');
+                            if (typeof window !== 'undefined') {
+                                (window as any).__lastEmbeddingError = errorMsg;
+                            }
+                            toast({
+                                title: await getTranslation('ai.error.title'),
+                                description: errorMsg,
+                                variant: 'destructive',
+                            });
+                            throw new Error(errorMsg);
+                        }
+                    }
+
+                    const errorMsg = await getTranslation('ai.error.embeddingRequestFailed', { status: response.status.toString(), statusText: response.statusText });
+                    if (typeof window !== 'undefined') {
+                        (window as any).__lastEmbeddingError = errorMsg;
+                    }
+                    throw new Error(errorMsg);
+                }
+
+                // 清除之前的錯誤
+                if (typeof window !== 'undefined') {
+                    (window as any).__lastEmbeddingError = null;
+                }
+
+                const data = await response.json() as EmbeddingResponse;
+                if (!data || !data.data || !data.data[0] || !data.data[0].embedding) {
+                    const errorMsg = await getTranslation('ai.error.embeddingResultFormatError');
+                    throw new Error(errorMsg);
+                }
+
+                return data.data[0].embedding;
+            } catch (fetchError: any) {
+                clearTimeout(timeoutId);
+                // 如果是超時錯誤，拋出具體錯誤
+                if (fetchError?.name === 'AbortError' || fetchError?.message?.includes('aborted')) {
+                    const errorMsg = await getTranslation('ai.error.embeddingRequestFailed', {
+                        status: 'TIMEOUT',
+                        statusText: '請求超時（120 秒）'
+                    });
+                    if (typeof window !== 'undefined') {
+                        (window as any).__lastEmbeddingError = errorMsg;
+                    }
+                    throw new Error(errorMsg);
+                }
+                // 其他錯誤繼續向上拋出
+                throw fetchError;
             }
-
-            const data = await response.json() as EmbeddingResponse;
-            if (!data || !data.data || !data.data[0] || !data.data[0].embedding) {
-                const errorMsg = await getTranslation('ai.error.embeddingResultFormatError');
-                throw new Error(errorMsg);
-            }
-
-            return data.data[0].embedding;
         }
 
         return null;
