@@ -1,5 +1,6 @@
-# NoteGen 項目清理腳本 語法.\scripts\clean.ps1
+# NoteGen 項目清理腳本
 # 用途：清理所有構建產物和依賴
+# 語法: .\scripts\clean.ps1
 
 $ErrorActionPreference = "Stop"
 
@@ -26,7 +27,8 @@ foreach ($item in $itemsToRemove) {
     if (Test-Path $path) {
         Write-Host "  刪除: $item" -ForegroundColor Gray
         Remove-Item -Recurse -Force $path -ErrorAction SilentlyContinue
-    } else {
+    }
+    else {
         Write-Host "  跳過: $item (不存在)" -ForegroundColor DarkGray
     }
 }
@@ -45,7 +47,8 @@ if (Test-Path $tauriDir) {
             Write-Host "  [OK] Rust 構建產物已清理" -ForegroundColor Green
             $cleanSuccess = $true
         }
-    } catch {
+    }
+    catch {
         # cargo clean 失敗，繼續嘗試手動清理
     }
     
@@ -74,7 +77,8 @@ if (Test-Path $tauriDir) {
                     Remove-Item -Recurse -Force $fullPath -ErrorAction Stop
                     Write-Host "  [OK] 已刪除: $dir" -ForegroundColor Green
                     $removedAny = $true
-                } catch {
+                }
+                catch {
                     Write-Host "  [WARN]  無法刪除: $dir (可能被占用)" -ForegroundColor Yellow
                 }
             }
@@ -82,7 +86,8 @@ if (Test-Path $tauriDir) {
         
         if ($removedAny) {
             Write-Host "  [OK] 部分清理完成" -ForegroundColor Green
-        } else {
+        }
+        else {
             Write-Host "  [WARN]  無法清理 Rust 構建產物（文件被占用）" -ForegroundColor Yellow
             Write-Host "     解決方法：" -ForegroundColor DarkGray
             Write-Host "     1. 關閉文件管理器（如果正在訪問該目錄）" -ForegroundColor DarkGray

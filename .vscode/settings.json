@@ -30,7 +30,13 @@
     "search.exclude": {
         "**/*.code-search": true,
         "**/bower_components": true,
-        "**/node_modules": true
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/.next": true,
+        "**/target": true,
+        "**/public/dist": true,
+        "**/src-tauri/target": true,
+        "**/src-tauri/gen": true
     },
     // Cursor 擴展同步設置 - 注意：Cursor 目前不支援 cursor.sync.* 配置項
     // 如需控制同步，請使用 files.exclude、files.watcherExclude 和 cursor.general.globalCursorIgnoreList
@@ -52,6 +58,8 @@
     // 工具欄位置設置 - 移到左邊
     "workbench.activityBar.location": "default",
     "workbench.sideBar.location": "left",
+    // 禁用提示彈窗（包括側邊欄切換提示）
+    "workbench.tips.enabled": false,
     // Cursor 設置
     // 注意：以下配置項可能已過時或無效，已註釋
     // "cursor.cmdk.useThemedDiffBackground": true,  // 無效的配置項
