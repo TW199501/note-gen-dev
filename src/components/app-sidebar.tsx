@@ -1,0 +1,149 @@
+'use client'
+import { ImageUp, Search, Settings, Highlighter, SquarePen } from "lucide-react"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar"
+import { usePathname, useRouter } from 'next/navigation'
+import Link from "next/link"
+import AppStatus from "./app-status"
+import { Store } from "@tauri-apps/plugin-store"
+import { PinToggle } from "./pin-toggle"
+import { useTranslations } from 'next-intl'
+import { useSidebarStore } from "@/stores/sidebar"
+import { useEffect, useState } from "react"
+import useImageStore from "@/stores/imageHosting"
+ 
+interface AppSidebarProps {
+  onSearchClick?: () => void
+}
+
+export function AppSidebar({ onSearchClick }: AppSidebarProps) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const { toggleFileSidebar, toggleNoteSidebar, showFileSidebar, showNoteSidebar } = useSidebarStore()
+  const t = useTranslations()
+  const { imageRepoUserInfo } = useImageStore()
+  const [items, setItems] = useState([
+    {
+      title: t('navigation.record'),
+      url: "/core/record",
+      icon: Highlighter,
+      isActive: true,
+    },
+    {
+      title: t('navigation.write'),
+      url: "/core/article",
+      icon: SquarePen,
+    },
+    {
+      title: t('navigation.search'),
+      url: "/core/search",
+      icon: Search,
+    },
+  ])
+
+  async function initGithubImageHosting() {
+    const store = await Store.load('store.json')
+    const githubImageUsername = await store.get<string>('githubImageUsername')
+    const githubImageAccessToken = await store.get<string>('githubImageAccessToken')
+    if (githubImageUsername && githubImageAccessToken && !items.find(item => item.url === '/core/image')) {
+      setItems([...items, {
+        title: t('navigation.githubImageHosting'),
+        url: "/core/image",
+        icon: ImageUp,
+      }])
+    }
+  }
+
+  async function menuHandler(item: typeof items[0]) {
+    // 如果是搜索按钮，打开搜索对话框
+    if (item.url === '/core/search') {
+      onSearchClick?.()
+      return
+    }
+
+    // 如果是当前页面，执行 toggle 切换显示/隐藏
+    if (pathname === '/core/article' && item.url === '/core/article') {
+      toggleFileSidebar()
+    } else if (pathname === '/core/record' && item.url === '/core/record') {
+      toggleNoteSidebar()
+    } else {
+      // 如果是路由切换，确保对应的侧边栏显示
+      if (item.url === '/core/article') {
+        await showFileSidebar()
+      } else if (item.url === '/core/record') {
+        await showNoteSidebar()
+      }
+      router.push(item.url)
+    }
+    const store = await Store.load('store.json')
+    store.set('currentPage', item.url)
+  }
+
+  useEffect(() => {
+    initGithubImageHosting()
+  }, [imageRepoUserInfo])
+
+  return (
+    <Sidebar 
+      collapsible="none"
+      className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r h-screen"
+    >
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <AppStatus />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {items.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    disabled={item.url === '#'}
+                    isActive={pathname === item.url}
+                    tooltip={{
+                      children: item.title,
+                      hidden: false,
+                    }}
+                  >
+                    <div className="cursor-pointer" onClick={() => menuHandler(item)}>
+                      <item.icon />
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <PinToggle />
+        <SidebarMenuButton isActive={pathname.includes('/core/setting')} asChild className="md:h-8 md:p-0"
+          tooltip={{
+            children: t('common.settings'),
+            hidden: false,
+          }}
+        >
+          <Link href="/core/setting">
+            <div className="flex size-8 items-center justify-center rounded-lg">
+              <Settings className="size-4" />
+            </div>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarFooter>
+    </Sidebar>
+  )
+}
