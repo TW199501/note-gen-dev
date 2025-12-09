@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useState, useRef } from "react";
 import useArticleStore from "@/stores/article";
 import { Clock } from "lucide-react";
@@ -48,12 +49,17 @@ export default function VectorTimer() {
 
         // 當從 true 變為 false 時（停止計算）
         if (prevCalculating && !isVectorCalculating) {
-            // 停止計時，但保留最終時間
+            // 計算並設置最終時間
+            if (startTimeRef.current) {
+                const finalTime = Date.now() - startTimeRef.current;
+                setElapsedTime(finalTime);
+                startTimeRef.current = null;
+            }
+            // 停止計時
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
             }
-            // elapsedTime 保持不變，顯示最終時間
         }
 
         // 清理函數
@@ -65,6 +71,9 @@ export default function VectorTimer() {
     }, [isVectorCalculating]);
 
     // 只在有計算過或正在計算時顯示
+    // 如果正在計算中，立即顯示（即使 elapsedTime 還是 0）
+    // 如果計算完成，顯示最終時間（elapsedTime > 0）
+    // 如果從未計算過且當前沒有在計算，不顯示
     if (!isVectorCalculating && elapsedTime === 0) {
         return null;
     }
@@ -72,7 +81,7 @@ export default function VectorTimer() {
     return (
         <div className="flex items-center gap-1 px-1 text-xs text-muted-foreground">
             <Clock className="!size-3" />
-            <span className="font-mono">
+            <span className="font-mono min-w-[3ch]">
                 {formatTime(elapsedTime)}
             </span>
         </div>

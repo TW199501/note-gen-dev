@@ -61,7 +61,7 @@ export default function VectorCalc() {
 
         if (isVectorCalculating) {
             // 计算中：旋转的加载图标
-            return <Loader2 className="!size-3.5 animate-spin" />
+            return <Loader2 className="!size-3.5 animate-spin text-primary" />
         } else if (pendingVectorContent) {
             // 待计算：带闪电的数据库图标
             return <DatabaseZap className="!size-3.5" />
@@ -102,7 +102,7 @@ export default function VectorCalc() {
                     style={getBackgroundStyle()}
                 />
             )}
-            <div className="relative flex items-center">
+            <div className="relative flex items-center z-10">
                 {getIcon()}
             </div>
         </Button>
