@@ -349,7 +349,14 @@ export async function checkRerankModelAvailable(): Promise<boolean> {
  * @param retryCount 重試次數（內部使用）
  * @returns 嵌入向量结果，如果失败则返回null
  */
+// 全局重试计数，用于跨 chunk 追踪重试次数
+let globalEmbeddingRetryCount = 0;
+
 export async function fetchEmbedding(text: string, retryCount: number = 0): Promise<number[] | null> {
+    // 如果傳入了 retryCount 且大於 0，使用傳入的值；否則使用全局計數
+    // 這樣可以在 chunk 之間保持重試計數的連續性
+    // 注意：當 retryCount 為 0 時，可能是第一次調用，應該使用全局計數以保持連續性
+    const currentRetryCount = retryCount > 0 ? retryCount : globalEmbeddingRetryCount;
     try {
         if (text.length) {
             // 获取嵌入模型信息
@@ -394,14 +401,17 @@ export async function fetchEmbedding(text: string, retryCount: number = 0): Prom
                     // 處理 429 (Rate Limit) 錯誤：重試機制
                     if (response.status === 429) {
                         const maxRetries = 3;
-                        if (retryCount < maxRetries) {
+                        if (currentRetryCount < maxRetries) {
+                            // 更新全局重试计数
+                            globalEmbeddingRetryCount = currentRetryCount + 1;
+
                             // 從響應頭獲取重試等待時間，默認 5 秒
                             const retryAfter = response.headers.get('Retry-After');
-                            const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : (retryCount + 1) * 5000;
+                            const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : globalEmbeddingRetryCount * 5000;
 
-                            // 等待後重試
+                            // 等待後重試（使用全局重试计数）
                             await new Promise(resolve => setTimeout(resolve, waitTime));
-                            return fetchEmbedding(text, retryCount + 1);
+                            return fetchEmbedding(text, globalEmbeddingRetryCount);
                         } else {
                             const errorMsg = await getTranslation('ai.error.embeddingRequestFailed', {
                                 status: response.status.toString(),
@@ -464,13 +474,16 @@ export async function fetchEmbedding(text: string, retryCount: number = 0): Prom
                         // 如果不是 API key 錯誤，可能是速率限制，持續重試
                         // 設置一個較大的最大重試次數（100次），避免真正的無限循環
                         const maxRetries = 100;
-                        if (retryCount < maxRetries) {
+                        if (currentRetryCount < maxRetries) {
+                            // 更新全局重试计数
+                            globalEmbeddingRetryCount = currentRetryCount + 1;
+
                             // 等待時間遞增：5秒、10秒、15秒、20秒、25秒，之後固定為30秒
                             const maxWaitTime = 30000; // 最大等待時間30秒
-                            const waitTime = Math.min((retryCount + 1) * 5000, maxWaitTime);
+                            const waitTime = Math.min(globalEmbeddingRetryCount * 5000, maxWaitTime);
                             const waitingMsg = await getTranslation('ai.error.embeddingRateLimitWaiting', {
                                 waitTime: (waitTime / 1000).toString(),
-                                retryCount: (retryCount + 1).toString(),
+                                retryCount: globalEmbeddingRetryCount.toString(),
                                 maxRetries: maxRetries.toString()
                             });
 
@@ -481,11 +494,14 @@ export async function fetchEmbedding(text: string, retryCount: number = 0): Prom
                                 variant: 'default',
                             });
 
-                            // 等待後重試
+                            // 等待後重試（使用全局重试计数）
                             await new Promise(resolve => setTimeout(resolve, waitTime));
-                            return fetchEmbedding(text, retryCount + 1);
+                            return fetchEmbedding(text, globalEmbeddingRetryCount);
                         } else {
                             // 達到最大重試次數（100次），可能是持續的速率限制或服務器問題
+                            // 重置全局重試計數
+                            globalEmbeddingRetryCount = 0;
+
                             // 顯示錯誤提示，但使用 default 變體，因為這不是 API Key 問題
                             const errorMsg = await getTranslation('ai.error.embeddingRequestFailed403');
                             if (typeof window !== 'undefined') {

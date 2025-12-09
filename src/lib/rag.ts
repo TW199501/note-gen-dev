@@ -128,46 +128,14 @@ export async function processMarkdownFile(
         await deleteVectorDocumentsByFilename(filename);
 
         // 处理每个文本块
-        // 使用共享的重试计数，避免每个 chunk 都从 0 开始重试
+        // fetchEmbedding 内部使用全局重试计数，确保在 chunk 之间重试计数保持连续
         // 这样在遇到速率限制时，重试计数会持续累积，而不是每个 chunk 都重置
-        let sharedRetryCount = 0;
         for (let i = 0; i < chunks.length; i++) {
             const chunk = chunks[i];
 
-            // 计算嵌入向量（使用共享的重试计数）
-            // 如果遇到速率限制，fetchEmbedding 会内部重试，但我们需要在 chunk 之间保持重试计数的连续性
-            let embedding = null;
-            let maxAttempts = 3; // 每个 chunk 最多尝试 3 次（包括初始尝试）
-            let attemptCount = 0;
-            
-            while (attemptCount < maxAttempts && !embedding) {
-                try {
-                    // 使用共享的重试计数，这样在多个 chunk 之间重试计数会持续累积
-                    embedding = await fetchEmbedding(chunk, sharedRetryCount);
-                    // 如果成功，重置共享重试计数（因为已经成功，下一个 chunk 可以从 0 开始）
-                    sharedRetryCount = 0;
-                    break;
-                } catch (error) {
-                    attemptCount++;
-                    const errorMsg = error instanceof Error ? error.message : String(error);
-                    
-                    // 检查是否是 403 速率限制错误
-                    if (errorMsg.includes('403') || errorMsg.includes('Forbidden') || errorMsg.includes('Rate limit')) {
-                        // 速率限制错误：递增共享重试计数
-                        sharedRetryCount++;
-                        // 如果还有尝试次数，继续重试当前 chunk
-                        if (attemptCount < maxAttempts) {
-                            continue;
-                        } else {
-                            // 达到最大尝试次数，抛出错误
-                            throw error;
-                        }
-                    } else {
-                        // 其他错误（如 API Key 错误）：立即抛出
-                        throw error;
-                    }
-                }
-            }
+            // 计算嵌入向量
+            // fetchEmbedding 内部会使用全局重试计数，确保跨 chunk 的连续性
+            const embedding = await fetchEmbedding(chunk);
 
             if (!embedding) {
                 // 如果獲取嵌入向量失敗，檢查是否是 403 錯誤
