@@ -1,20 +1,20 @@
-# NoteGen 項目清理腳本
-# 用途：清理所有構建產物和依賴
-# 語法: .\scripts\clean.ps1
+# NoteGen Clean Script
+# Purpose: Clean all build artifacts and dependencies
+# Usage: .\scripts\clean.ps1
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  NoteGen 項目清理腳本" -ForegroundColor Cyan
+Write-Host "  NoteGen Clean Script" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
-Write-Host "清理構建產物..." -ForegroundColor Yellow
+Write-Host "Cleaning build artifacts..." -ForegroundColor Yellow
 
-# 清理前端構建產物
+# Clean frontend build artifacts
 $itemsToRemove = @(
     ".next",
     "out",
@@ -25,38 +25,38 @@ $itemsToRemove = @(
 foreach ($item in $itemsToRemove) {
     $path = Join-Path $projectRoot $item
     if (Test-Path $path) {
-        Write-Host "  刪除: $item" -ForegroundColor Gray
+        Write-Host "  Removing: $item" -ForegroundColor Gray
         Remove-Item -Recurse -Force $path -ErrorAction SilentlyContinue
     }
     else {
-        Write-Host "  跳過: $item (不存在)" -ForegroundColor DarkGray
+        Write-Host "  Skipping: $item (not found)" -ForegroundColor DarkGray
     }
 }
 
-# 清理 Rust 構建產物
+# Clean Rust build artifacts
 $tauriDir = Join-Path $projectRoot "src-tauri"
 if (Test-Path $tauriDir) {
-    Write-Host "  清理 Rust 構建產物..." -ForegroundColor Gray
+    Write-Host "  Cleaning Rust build artifacts..." -ForegroundColor Gray
     Set-Location $tauriDir
     
-    # 先嘗試正常的 cargo clean
+    # Try normal cargo clean first
     $cleanSuccess = $false
     try {
-        $cleanOutput = cargo clean 2>&1 | Out-String
+        $null = cargo clean 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "  [OK] Rust 構建產物已清理" -ForegroundColor Green
+            Write-Host "  [OK] Rust build artifacts cleaned" -ForegroundColor Green
             $cleanSuccess = $true
         }
     }
     catch {
-        # cargo clean 失敗，繼續嘗試手動清理
+        # cargo clean failed, continue with manual cleanup
     }
     
-    # 如果 cargo clean 失敗，嘗試手動刪除特定目錄
+    # If cargo clean failed, try manual deletion
     if (-not $cleanSuccess) {
-        Write-Host "  [WARN]  cargo clean 失敗（文件可能被占用），嘗試手動清理..." -ForegroundColor Yellow
+        Write-Host "  [WARN]  cargo clean failed (files may be locked), trying manual cleanup..." -ForegroundColor Yellow
         
-        # 嘗試刪除可能被占用的目錄（從最外層開始）
+        # Try to delete locked directories (from outermost layer)
         $targetDirsToRemove = @(
             "target\release\bundle",
             "target\release",
@@ -69,31 +69,31 @@ if (Test-Path $tauriDir) {
             $fullPath = Join-Path $tauriDir $dir
             if (Test-Path $fullPath) {
                 try {
-                    # 先嘗試移除只讀屬性
+                    # Try to remove read-only attributes first
                     Get-ChildItem -Path $fullPath -Recurse -Force | ForEach-Object {
                         $_.Attributes = $_.Attributes -band (-bnot [System.IO.FileAttributes]::ReadOnly)
                     }
                     
                     Remove-Item -Recurse -Force $fullPath -ErrorAction Stop
-                    Write-Host "  [OK] 已刪除: $dir" -ForegroundColor Green
+                    Write-Host "  [OK] Deleted: $dir" -ForegroundColor Green
                     $removedAny = $true
                 }
                 catch {
-                    Write-Host "  [WARN]  無法刪除: $dir (可能被占用)" -ForegroundColor Yellow
+                    Write-Host "  [WARN]  Cannot delete: $dir (may be locked)" -ForegroundColor Yellow
                 }
             }
         }
         
         if ($removedAny) {
-            Write-Host "  [OK] 部分清理完成" -ForegroundColor Green
+            Write-Host "  [OK] Partial cleanup completed" -ForegroundColor Green
         }
         else {
-            Write-Host "  [WARN]  無法清理 Rust 構建產物（文件被占用）" -ForegroundColor Yellow
-            Write-Host "     解決方法：" -ForegroundColor DarkGray
-            Write-Host "     1. 關閉文件管理器（如果正在訪問該目錄）" -ForegroundColor DarkGray
-            Write-Host "     2. 關閉防毒軟體的實時掃描" -ForegroundColor DarkGray
-            Write-Host "     3. 關閉所有相關程序（VS Code、終端等）" -ForegroundColor DarkGray
-            Write-Host "     4. 重啟電腦後再試" -ForegroundColor DarkGray
+            Write-Host "  [WARN]  Cannot clean Rust build artifacts (files are locked)" -ForegroundColor Yellow
+            Write-Host "     Solutions:" -ForegroundColor DarkGray
+            Write-Host "     1. Close file manager (if accessing the directory)" -ForegroundColor DarkGray
+            Write-Host "     2. Disable antivirus real-time scanning" -ForegroundColor DarkGray
+            Write-Host "     3. Close all related programs (VS Code, terminals, etc.)" -ForegroundColor DarkGray
+            Write-Host "     4. Restart computer and try again" -ForegroundColor DarkGray
         }
     }
     
@@ -101,4 +101,4 @@ if (Test-Path $tauriDir) {
 }
 
 Write-Host ""
-Write-Host "[OK] 清理完成！" -ForegroundColor Green
+Write-Host "[OK] Cleanup completed!" -ForegroundColor Green

@@ -229,6 +229,162 @@
 
 ---
 
+## 🔧 開發規則與最佳實踐
+
+### API 錯誤處理機制（403 錯誤）
+
+**適用場景**: 所有需要區分 API Key 錯誤和速率限制的 API 請求
+
+**規則說明**:
+
+1. **錯誤類型判斷**
+   - 當收到 `403 Forbidden` 響應時，需要讀取響應體判斷錯誤類型
+   - 檢查錯誤信息中是否包含以下關鍵詞（不區分大小寫）：
+     - `api key`、`apikey`
+     - `invalid key`、`invalid api`、`api key is invalid`、`api key invalid`
+     - `unauthorized`、`authentication`
+     - `permission denied`
+     - `forbidden`（僅作為輔助判斷）
+
+2. **API Key 錯誤處理**
+   - 如果檢測到是 API Key 錯誤，**立即報錯，不進行重試**
+   - 顯示明確的錯誤提示，告知用戶檢查 API Key
+   - 錯誤提示應包含：
+     - API Key 是否正確
+     - API Key 是否有權限訪問對應端點
+     - 是否已正確配置 API Key
+
+3. **速率限制處理**
+   - 如果不是 API Key 錯誤，視為速率限制
+   - 顯示等待提示，告知用戶正在等待模型回應
+   - 實現重試機制：
+     - 最多重試 3 次
+     - 等待時間遞增：5秒、10秒、15秒
+     - 每次重試都顯示提示，包含等待時間和重試進度（如：`等待 5 秒後重試 (1/3)...`）
+
+4. **用戶提示要求**
+   - API Key 錯誤：使用 `variant: 'destructive'` 的 toast 提示
+   - 速率限制：使用 `variant: 'default'` 的 toast 提示，標題為「等待模型回應」
+   - 所有提示都應支持多語言
+
+5. **實現位置**
+   - **當前實現**: `src/lib/ai.ts` 的 `fetchEmbedding` 函數
+   - **翻譯鍵值**:
+     - `ai.error.embeddingApiKeyInvalid`: API Key 無效錯誤提示
+     - `ai.error.embeddingRateLimitTitle`: 速率限制等待標題
+     - `ai.error.embeddingRateLimitWaiting`: 速率限制等待提示（包含 `{waitTime}`, `{retryCount}`, `{maxRetries}` 參數）
+
+**後續應用**:
+
+- 當其他 API 請求（如 Rerank、Chat 等）遇到類似 403 錯誤時，應套用相同的處理規則
+- 確保所有相關的錯誤處理都遵循此機制
+
+**參考代碼**:
+
+```typescript
+// 檢查是否是 API key 相關錯誤
+const errorMessage = errorBody?.error?.message || errorBody?.message || errorBody?.error || '';
+const errorMessageLower = errorMessage.toLowerCase();
+const isApiKeyError = errorMessage && (
+    errorMessageLower.includes('api key') ||
+    errorMessageLower.includes('apikey') ||
+    errorMessageLower.includes('invalid key') ||
+    errorMessageLower.includes('unauthorized') ||
+    errorMessageLower.includes('authentication') ||
+    errorMessageLower.includes('permission denied') ||
+    errorMessageLower.includes('invalid api') ||
+    errorMessageLower.includes('api key is invalid') ||
+    errorMessageLower.includes('api key invalid')
+);
+
+// API Key 錯誤：立即報錯
+if (isApiKeyError) {
+    const apiKeyErrorMsg = await getTranslation('ai.error.embeddingApiKeyInvalid');
+    toast({
+        title: await getTranslation('ai.error.title'),
+        description: apiKeyErrorMsg,
+        variant: 'destructive',
+    });
+    throw new Error(apiKeyErrorMsg);
+}
+
+// 速率限制：重試機制
+const maxRetries = 3;
+if (retryCount < maxRetries) {
+    const waitTime = (retryCount + 1) * 5000;
+    const waitingMsg = await getTranslation('ai.error.embeddingRateLimitWaiting', {
+        waitTime: (waitTime / 1000).toString(),
+        retryCount: (retryCount + 1).toString(),
+        maxRetries: maxRetries.toString()
+    });
+    toast({
+        title: await getTranslation('ai.error.embeddingRateLimitTitle'),
+        description: waitingMsg,
+        variant: 'default',
+    });
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+    return fetchEmbedding(text, retryCount + 1);
+}
+```
+
+---
+
+### UI 布局設計規則（狀態列高度分配）
+
+**適用場景**: 所有需要添加底部狀態列的頁面組件
+
+**規則說明**:
+
+1. **狀態列標準高度**
+   - 所有狀態列統一使用 `h-6`（24px）高度
+   - 對應 Tailwind CSS 類：`h-6` = `1.5rem` = `24px`
+
+2. **高度分配原則**
+   - 當頁面需要添加狀態列時，**應從使用 `flex-1` 的內容區域自動減少高度**
+   - 使用 `flex-1` 的組件會自動佔據剩餘空間，無需手動計算高度
+   - 保持響應式布局，讓 Flexbox 自動處理高度分配
+
+3. **組件結構模式**
+
+   **Article 頁面（已有狀態列）**：
+
+   ```
+   Article 組件 (h-screen, flex-col)
+   ├── CustomToolbar (固定高度)
+   ├── 編輯器內容區域 (flex-1) ← 自動適應狀態列高度
+   └── CustomFooter (h-6, 24px) ← 狀態列
+   ```
+
+   **Chat 組件（如需添加狀態列）**：
+
+   ```
+   Chat 組件 (h-screen, flex-col)
+   ├── ChatHeader (固定高度)
+   ├── ChatContent (flex-1) ← 自動減少 24px
+   ├── ClipboardListener (隱藏)
+   ├── ChatInput (固定高度)
+   └── ChatFooter (h-6, 24px) ← 新增狀態列
+   ```
+
+4. **實現要點**
+   - 狀態列應放在組件的最底部
+   - 內容區域必須使用 `flex-1` 以實現自動高度調整
+   - 不需要手動計算或設置具體高度值
+   - 與 Article 頁面的設計模式保持一致
+
+5. **參考文件**
+   - **狀態列組件**: `src/app/core/article/custom-footer/index.tsx`
+   - **Article 頁面結構**: `src/app/core/article/md-editor.tsx`
+   - **Chat 組件結構**: `src/app/core/record/chat/index.tsx`
+
+**後續應用**:
+
+- 當其他頁面需要添加狀態列時，應遵循相同的設計模式
+- 確保所有狀態列的高度統一為 24px
+- 使用 Flexbox 的 `flex-1` 實現自動高度分配，避免硬編碼高度值
+
+---
+
 ## 📝 檢查範圍
 
 - ✅ 已檢查 `src/` 目錄下的所有主要文件

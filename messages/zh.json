@@ -21,7 +21,13 @@
         "language": "语言",
         "success": "成功",
         "error": "失败",
-        "defaultFileName": "未命名文档"
+        "defaultFileName": "未命名文档",
+        "errors": {
+            "readDirectoryFailed": "读取目录 {dirPath} 失败",
+            "fuzzySearchError": "模糊搜索出错",
+            "parallelFuzzySearchError": "并行模糊搜索出错",
+            "ocrFailed": "OCR 识别失败"
+        }
     },
     "settings": {
         "others": "高级",
@@ -242,6 +248,25 @@
         "audio": {
             "title": "语音设置",
             "desc": "在这里，你可以配置语音相关设置，包括文本转语音（朗读）和语音转文本（录音识别）功能。",
+            "error": {
+                "textEmpty": "文本内容为空",
+                "speechSynthesisNotSupported": "当前浏览器不支持语音合成功能",
+                "audioModelNotConfigured": "未配置音频模型",
+                "audioModelNotFound": "未找到音频模型配置",
+                "audioModelIncomplete": "音频模型配置不完整",
+                "audioGenerationFailed": "音频生成失败: {status} {errorText}",
+                "audioGenerationError": "音频生成错误",
+                "audioContextDestroyed": "音频上下文已被销毁",
+                "audioDecodeFailed": "音频解码失败: {error}",
+                "audioPlayFailed": "音频播放失败: {error}",
+                "speechFailed": "朗读失败",
+                "sttModelNotConfigured": "未配置语音识别模型",
+                "sttModelNotFound": "未找到语音识别模型配置",
+                "sttModelIncomplete": "语音识别模型配置不完整",
+                "sttFailed": "语音识别失败: {status} {errorText}",
+                "sttError": "语音识别错误",
+                "conversionFailed": "音频转换失败"
+            },
             "tts": {
                 "title": "文本转语音（TTS）",
                 "desc": "配置朗读功能，为聊天内容提供语音播放。",
@@ -1261,6 +1286,28 @@
         "imageRepo": "图床仓库",
         "articleRepo": "文章仓库"
     },
+    "rag": {
+        "error": {
+            "processFileFailed": "处理文件 {filePath} 失败",
+            "cannotCalculateEmbedding": "无法计算文件 {filename} 第 {chunkIndex} 块的向量",
+            "processWorkspaceFailed": "处理工作区Markdown文件失败",
+            "vectorProcessingFailed": "向量处理失败",
+            "readFileFailed": "读取文件 {filePath} 内容失败",
+            "collectMarkdownFailed": "收集Markdown内容失败",
+            "fuzzySearchFailed": "模糊搜索失败",
+            "vectorSearchFailed": "向量搜索失败",
+            "getContextFailed": "获取查询上下文失败",
+            "updateVectorFailed": "更新文件 {filename} 的向量失败",
+            "embeddingModelCheckFailed": "嵌入模型检查失败"
+        },
+        "common": {
+            "unnamedFile": "未命名文件",
+            "filePrefix": "文件："
+        },
+        "toast": {
+            "vectorDatabaseUpdate": "向量数据库更新"
+        }
+    },
     "ai": {
         "thinking": "思考",
         "error": {
@@ -1271,9 +1318,15 @@
             "embeddingModelNotConfigured": "未配置嵌入模型或模型配置不正确",
             "embeddingModelIncomplete": "嵌入模型配置不完整",
             "embeddingRequestFailed": "嵌入请求失败: {status} {statusText}",
+            "embeddingRequestFailed403": "嵌入请求失败: 403 Forbidden。请检查：1) API Key 是否有效 2) API Key 是否有权限访问 embedding 端点 3) API 服务器是否正确配置",
+            "embeddingApiKeyInvalid": "API Key 无效或无权限。请检查：1) API Key 是否正确 2) API Key 是否有权限访问 embedding 端点 3) 是否已正确配置 API Key",
+            "embeddingRateLimitTitle": "等待模型回应",
+            "embeddingRateLimitWaiting": "模型可能达到速率限制，正在等待 {waitTime} 秒后重试 ({retryCount}/{maxRetries})...",
             "embeddingResultFormatError": "嵌入结果格式不正确",
+            "embeddingRequestTimeout": "请求超时（{timeout} 秒）",
             "rerankRequestFailed": "重排序请求失败: {status} {statusText}",
             "rerankResultFormatError": "重排序结果格式不正确",
+            "toolCallFailed": "工具调用失败",
             "rerankFailed": "重排序失败",
             "rerankCheckFailed": "重排序模型检查失败",
             "maxToolCallsReached": "达到最大工具调用次数限制",
@@ -1423,13 +1476,17 @@
                 "filterQuickSync": "过滤快速同步",
                 "committedAt": "提交于",
                 "pull": "拉取",
-                "quickSync": "快速同步"
+                "quickSync": "快速同步",
+                "getHistoryFailed": "获取文件历史内容失败",
+                "getHistoryFailedWithService": "{service} 获取文件历史内容失败"
             },
             "vectorCalc": {
                 "tooltip": "向量计算：编辑完成30秒后自动计算，或点击立即计算",
                 "calculating": "计算中",
                 "pending": "待计算 {progress}%",
-                "synced": "已同步"
+                "synced": "已同步",
+                "disabled": "未启用",
+                "disabledTooltip": "向量数据库未启用，点击前往设置页面启用"
             },
             "export": {
                 "buttonLabel": "导出文章",

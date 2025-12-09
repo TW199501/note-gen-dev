@@ -1,17 +1,52 @@
 import { toast } from "@/hooks/use-toast";
 import { Store } from "@tauri-apps/plugin-store";
 import OpenAI from 'openai';
-import { AiConfig } from "@/app/core/setting/config";
+import { AiConfig, ModelConfig } from "@/app/core/setting/config";
 import { fetch } from "@tauri-apps/plugin-http";
 
 /**
  * 獲取翻譯文本的輔助函數
  */
-async function getTranslation(key: string, params?: Record<string, any>): Promise<string> {
+export async function getTranslation(key: string, params?: Record<string, any>): Promise<string> {
     try {
-        const store = await Store.load('store.json');
-        const locale = await store.get<string>('locale') || 'zh';
-        const messages = await import(`../../messages/${locale}.json`);
+        // 優先從 localStorage 讀取語言設置（與 NextIntlProvider 保持一致）
+        let locale: string = 'zh';
+        if (typeof window !== 'undefined') {
+            const savedLocale = localStorage.getItem('app-language');
+            if (savedLocale) {
+                locale = savedLocale;
+            } else {
+                // 如果 localStorage 沒有，嘗試從 store 讀取
+                const store = await Store.load('store.json');
+                const storeLocale = await store.get<string>('locale');
+                if (storeLocale) {
+                    locale = storeLocale;
+                }
+            }
+        } else {
+            // SSR 環境，從 store 讀取
+            const store = await Store.load('store.json');
+            const storeLocale = await store.get<string>('locale');
+            if (storeLocale) {
+                locale = storeLocale;
+            }
+        }
+
+        // 調試：記錄實際使用的語言（僅在開發環境）
+        if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+            console.debug(`[getTranslation] Using locale: ${locale} for key: ${key}`);
+        }
+
+        // 載入對應語言的翻譯文件
+        let messages: any;
+        try {
+            messages = await import(`../../messages/${locale}.json`);
+        } catch (importError) {
+            // 如果載入失敗（例如文件不存在），回退到簡體中文
+            console.warn(`Failed to load messages for locale: ${locale}, falling back to zh`, importError);
+            messages = await import(`../../messages/zh.json`);
+        }
+
         const keys = key.split('.');
         let value: any = messages.default;
         for (const k of keys) {
@@ -27,20 +62,23 @@ async function getTranslation(key: string, params?: Record<string, any>): Promis
             }
             return value;
         }
-        // 如果找不到翻譯，返回中文後備
-        const zhMessages = await import(`../../messages/zh.json`);
-        let zhValue: any = zhMessages.default;
+
+        // 如果找不到翻譯，回退到簡體中文作為後備語言
+        // 所有語言（包括繁體中文）都回退到簡體中文，因為簡體中文是最完整的翻譯
+        const fallbackLocale = 'zh';
+        const fallbackMessages = await import(`../../messages/${fallbackLocale}.json`);
+        let fallbackValue: any = fallbackMessages.default;
         for (const k of keys) {
-            zhValue = zhValue?.[k];
-            if (zhValue === undefined) break;
+            fallbackValue = fallbackValue?.[k];
+            if (fallbackValue === undefined) break;
         }
-        if (typeof zhValue === 'string') {
+        if (typeof fallbackValue === 'string') {
             if (params) {
-                return zhValue.replace(/\{(\w+)\}/g, (match, paramKey) => {
+                return fallbackValue.replace(/\{(\w+)\}/g, (match, paramKey) => {
                     return params[paramKey]?.toString() || match;
                 });
             }
-            return zhValue;
+            return fallbackValue;
         }
         return key; // 如果都找不到，返回鍵值本身
     } catch (error) {
@@ -60,7 +98,7 @@ async function getPromptContent(): Promise<string> {
     if (currentPromptId) {
         const promptList = await store.get<Array<{ id: string, content: string }>>('promptList')
         if (promptList) {
-            const currentPrompt = promptList.find(prompt => prompt.id === currentPromptId)
+            const currentPrompt = promptList.find((prompt: { id: string, content: string }) => prompt.id === currentPromptId)
             if (currentPrompt && currentPrompt.content) {
                 promptContent = currentPrompt.content
             }
@@ -87,14 +125,14 @@ async function getAISettings(modelType?: string): Promise<AiConfig | undefined> 
         // 检查新的 models 数组结构
         if (config.models && config.models.length > 0) {
             // 首先尝试直接匹配模型ID
-            let targetModel = config.models.find(model => model.id === modelId)
+            let targetModel = config.models.find((model: ModelConfig) => model.id === modelId)
 
             // 如果没找到，尝试匹配组合键格式 ${config.key}-${model.id}
             if (!targetModel && typeof modelId === 'string' && modelId.includes('-')) {
                 const expectedPrefix = `${config.key}-`
                 if (modelId.startsWith(expectedPrefix)) {
                     const originalModelId = modelId.substring(expectedPrefix.length)
-                    targetModel = config.models.find(model => model.id === originalModelId)
+                    targetModel = config.models.find((model: ModelConfig) => model.id === originalModelId)
                 }
             }
 
@@ -192,7 +230,7 @@ async function getEmbeddingModelInfo() {
     for (const config of aiModelList) {
         // 检查新的 models 数组结构
         if (config.models && config.models.length > 0) {
-            const targetModel = config.models.find(model =>
+            const targetModel = config.models.find((model: ModelConfig) =>
                 model.id === embeddingModel && model.modelType === 'embedding'
             );
             if (targetModel) {
@@ -233,7 +271,7 @@ export async function getRerankModelInfo() {
     for (const config of aiModelList) {
         // 检查新的 models 数组结构
         if (config.models && config.models.length > 0) {
-            const targetModel = config.models.find(model =>
+            const targetModel = config.models.find((model: ModelConfig) =>
                 model.id === rerankModel && model.modelType === 'rerank'
             );
             if (targetModel) {
@@ -308,9 +346,17 @@ export async function checkRerankModelAvailable(): Promise<boolean> {
 /**
  * 请求嵌入向量
  * @param text 需要嵌入的文本
+ * @param retryCount 重試次數（內部使用）
  * @returns 嵌入向量结果，如果失败则返回null
  */
-export async function fetchEmbedding(text: string): Promise<number[] | null> {
+// 全局重试计数，用于跨 chunk 追踪重试次数
+let globalEmbeddingRetryCount = 0;
+
+export async function fetchEmbedding(text: string, retryCount: number = 0): Promise<number[] | null> {
+    // 如果傳入了 retryCount 且大於 0，使用傳入的值；否則使用全局計數
+    // 這樣可以在 chunk 之間保持重試計數的連續性
+    // 注意：當 retryCount 為 0 時，可能是第一次調用，應該使用全局計數以保持連續性
+    const currentRetryCount = retryCount > 0 ? retryCount : globalEmbeddingRetryCount;
     try {
         if (text.length) {
             // 获取嵌入模型信息
@@ -327,33 +373,185 @@ export async function fetchEmbedding(text: string): Promise<number[] | null> {
                 throw new Error(errorMsg);
             }
 
-            // 发送嵌入请求
-            const response = await fetch(baseURL + '/embeddings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Origin': ""
-                },
-                body: JSON.stringify({
-                    model: model,
-                    input: text,
-                    encoding_format: 'float'
-                })
-            });
+            // 发送嵌入请求，設置連接超時為 60 秒（某些 API 可能需要更長時間）
+            // 使用 AbortController 設置整體請求超時為 120 秒
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 秒整體超時
 
-            if (!response.ok) {
-                const errorMsg = await getTranslation('ai.error.embeddingRequestFailed', { status: response.status.toString(), statusText: response.statusText });
-                throw new Error(errorMsg);
+            try {
+                const response = await fetch(baseURL + '/embeddings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Origin': ""
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        input: text,
+                        encoding_format: 'float'
+                    }),
+                    connectTimeout: 60000, // 60 秒連接超時
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    // 處理 429 (Rate Limit) 錯誤：重試機制
+                    if (response.status === 429) {
+                        const maxRetries = 3;
+                        if (currentRetryCount < maxRetries) {
+                            // 更新全局重试计数
+                            globalEmbeddingRetryCount = currentRetryCount + 1;
+
+                            // 從響應頭獲取重試等待時間，默認 5 秒
+                            const retryAfter = response.headers.get('Retry-After');
+                            const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : globalEmbeddingRetryCount * 5000;
+
+                            // 等待後重試（使用全局重试计数）
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                            return fetchEmbedding(text, globalEmbeddingRetryCount);
+                        } else {
+                            const errorMsg = await getTranslation('ai.error.embeddingRequestFailed', {
+                                status: response.status.toString(),
+                                statusText: 'Rate limit exceeded, max retries reached'
+                            });
+                            if (typeof window !== 'undefined') {
+                                (window as any).__lastEmbeddingError = errorMsg;
+                            }
+                            throw new Error(errorMsg);
+                        }
+                    }
+
+                    // 處理 403 錯誤：區分 API key 錯誤和速率限制
+                    if (response.status === 403) {
+                        // 嘗試讀取響應體以判斷錯誤類型
+                        let errorBody: any = null;
+                        try {
+                            const responseText = await response.text();
+                            if (responseText) {
+                                try {
+                                    errorBody = JSON.parse(responseText);
+                                } catch {
+                                    errorBody = { message: responseText };
+                                }
+                            }
+                        } catch {
+                            // 無法讀取響應體，繼續處理
+                        }
+
+                        // 檢查是否是 API key 相關錯誤
+                        const errorMessage = errorBody?.error?.message || errorBody?.message || errorBody?.error || '';
+                        const errorMessageLower = errorMessage.toLowerCase();
+                        const isApiKeyError = errorMessage && (
+                            errorMessageLower.includes('api key') ||
+                            errorMessageLower.includes('apikey') ||
+                            errorMessageLower.includes('invalid key') ||
+                            errorMessageLower.includes('unauthorized') ||
+                            errorMessageLower.includes('authentication') ||
+                            errorMessageLower.includes('permission denied') ||
+                            errorMessageLower.includes('invalid api') ||
+                            errorMessageLower.includes('api key is invalid') ||
+                            errorMessageLower.includes('api key invalid')
+                        );
+
+                        // 如果是 API key 錯誤，立即報錯，不重試
+                        if (isApiKeyError) {
+                            const apiKeyErrorMsg = await getTranslation('ai.error.embeddingApiKeyInvalid');
+                            if (typeof window !== 'undefined') {
+                                (window as any).__lastEmbeddingError = apiKeyErrorMsg;
+                            }
+                            // 顯示錯誤提示
+                            toast({
+                                title: await getTranslation('ai.error.title'),
+                                description: apiKeyErrorMsg,
+                                variant: 'destructive',
+                            });
+                            throw new Error(apiKeyErrorMsg);
+                        }
+
+                        // 如果不是 API key 錯誤，可能是速率限制，持續重試
+                        // 設置一個較大的最大重試次數（100次），避免真正的無限循環
+                        const maxRetries = 100;
+                        if (currentRetryCount < maxRetries) {
+                            // 更新全局重试计数
+                            globalEmbeddingRetryCount = currentRetryCount + 1;
+
+                            // 等待時間遞增：5秒、10秒、15秒、20秒、25秒，之後固定為30秒
+                            const maxWaitTime = 30000; // 最大等待時間30秒
+                            const waitTime = Math.min(globalEmbeddingRetryCount * 5000, maxWaitTime);
+                            const waitingMsg = await getTranslation('ai.error.embeddingRateLimitWaiting', {
+                                waitTime: (waitTime / 1000).toString(),
+                                retryCount: globalEmbeddingRetryCount.toString(),
+                                maxRetries: maxRetries.toString()
+                            });
+
+                            // 顯示等待提示（每次重試都顯示，讓用戶知道正在等待）
+                            toast({
+                                title: await getTranslation('ai.error.embeddingRateLimitTitle'),
+                                description: waitingMsg,
+                                variant: 'default',
+                            });
+
+                            // 等待後重試（使用全局重试计数）
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                            return fetchEmbedding(text, globalEmbeddingRetryCount);
+                        } else {
+                            // 達到最大重試次數（100次），可能是持續的速率限制或服務器問題
+                            // 重置全局重試計數
+                            globalEmbeddingRetryCount = 0;
+
+                            // 顯示錯誤提示，但使用 default 變體，因為這不是 API Key 問題
+                            const errorMsg = await getTranslation('ai.error.embeddingRequestFailed403');
+                            if (typeof window !== 'undefined') {
+                                (window as any).__lastEmbeddingError = errorMsg;
+                            }
+                            toast({
+                                title: await getTranslation('ai.error.title'),
+                                description: errorMsg,
+                                variant: 'default', // 使用 default 而不是 destructive，因為這可能是持續的速率限制
+                            });
+                            throw new Error(errorMsg);
+                        }
+                    }
+
+                    const errorMsg = await getTranslation('ai.error.embeddingRequestFailed', { status: response.status.toString(), statusText: response.statusText });
+                    if (typeof window !== 'undefined') {
+                        (window as any).__lastEmbeddingError = errorMsg;
+                    }
+                    throw new Error(errorMsg);
+                }
+
+                // 清除之前的錯誤
+                if (typeof window !== 'undefined') {
+                    (window as any).__lastEmbeddingError = null;
+                }
+
+                const data = await response.json() as EmbeddingResponse;
+                if (!data || !data.data || !data.data[0] || !data.data[0].embedding) {
+                    const errorMsg = await getTranslation('ai.error.embeddingResultFormatError');
+                    throw new Error(errorMsg);
+                }
+
+                return data.data[0].embedding;
+            } catch (fetchError: any) {
+                clearTimeout(timeoutId);
+                // 如果是超時錯誤，拋出具體錯誤
+                if (fetchError?.name === 'AbortError' || fetchError?.message?.includes('aborted')) {
+                    const timeoutMsg = await getTranslation('ai.error.embeddingRequestTimeout', { timeout: '120' });
+                    const errorMsg = await getTranslation('ai.error.embeddingRequestFailed', {
+                        status: 'TIMEOUT',
+                        statusText: timeoutMsg
+                    });
+                    if (typeof window !== 'undefined') {
+                        (window as any).__lastEmbeddingError = errorMsg;
+                    }
+                    throw new Error(errorMsg);
+                }
+                // 其他錯誤繼續向上拋出
+                throw fetchError;
             }
-
-            const data = await response.json() as EmbeddingResponse;
-            if (!data || !data.data || !data.data[0] || !data.data[0].embedding) {
-                const errorMsg = await getTranslation('ai.error.embeddingResultFormatError');
-                throw new Error(errorMsg);
-            }
-
-            return data.data[0].embedding;
         }
 
         return null;
@@ -411,7 +609,11 @@ export async function rerankDocuments(
         });
 
         if (!response.ok) {
-            throw new Error(`重排序请求失败: ${response.status} ${response.statusText}`);
+            const errorMsg = await getTranslation('ai.error.rerankRequestFailed', {
+                status: response.status.toString(),
+                statusText: response.statusText
+            });
+            throw new Error(errorMsg);
         }
 
         // 解析响应
@@ -419,7 +621,8 @@ export async function rerankDocuments(
 
         // 检查响应格式
         if (!data || !data.results) {
-            throw new Error('重排序结果格式不正确');
+            const errorMsg = await getTranslation('ai.error.rerankResultFormatError');
+            throw new Error(errorMsg);
         }
 
         // 处理重排序结果
@@ -736,7 +939,8 @@ export async function fetchAiStream(
                         })
 
                     } catch (error) {
-                        console.error('工具调用失败:', error)
+                        const errorMsg = await getTranslation('ai.error.toolCallFailed');
+                        console.error(errorMsg, error)
 
                         // 更新 MCP 工具调用状态为错误
                         if (chatId && mcpToolCallId) {

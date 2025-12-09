@@ -1,5 +1,5 @@
-# NoteGen 項目清理和重新構建腳本
-# 用途：清理所有構建產物和依賴，然後重新安裝和構建
+# NoteGen Rebuild Script
+# Purpose: Clean all build artifacts and dependencies, then reinstall and rebuild
 
 param(
     [switch]$SkipClean = $false,
@@ -11,18 +11,18 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  NoteGen 項目清理和重新構建腳本" -ForegroundColor Cyan
+Write-Host "  NoteGen Rebuild Script" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
-# 步驟 1: 清理構建產物
+# Step 1: Clean build artifacts
 if (-not $SkipClean) {
-    Write-Host "[1/5] 清理構建產物..." -ForegroundColor Yellow
+    Write-Host "[1/5] Cleaning build artifacts..." -ForegroundColor Yellow
     
-    # 清理前端構建產物
+    # Clean frontend build artifacts
     $itemsToRemove = @(
         ".next",
         "out",
@@ -33,34 +33,35 @@ if (-not $SkipClean) {
     foreach ($item in $itemsToRemove) {
         $path = Join-Path $projectRoot $item
         if (Test-Path $path) {
-            Write-Host "  刪除: $item" -ForegroundColor Gray
+            Write-Host "  Removing: $item" -ForegroundColor Gray
             Remove-Item -Recurse -Force $path -ErrorAction SilentlyContinue
         }
     }
     
-    # 清理 Rust 構建產物
+    # Clean Rust build artifacts
     $tauriDir = Join-Path $projectRoot "src-tauri"
     if (Test-Path $tauriDir) {
-        Write-Host "  清理 Rust 構建產物..." -ForegroundColor Gray
+        Write-Host "  Cleaning Rust build artifacts..." -ForegroundColor Gray
         Set-Location $tauriDir
         
-        # 先嘗試正常的 cargo clean
+        # Try normal cargo clean first
         $cleanSuccess = $false
         try {
-            $cleanOutput = cargo clean 2>&1 | Out-String
+            $null = cargo clean 2>&1
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "  [OK] Rust 構建產物已清理" -ForegroundColor Green
+                Write-Host "  [OK] Rust build artifacts cleaned" -ForegroundColor Green
                 $cleanSuccess = $true
             }
-        } catch {
-            # cargo clean 失敗，繼續嘗試手動清理
+        }
+        catch {
+            # cargo clean failed, continue with manual cleanup
         }
         
-        # 如果 cargo clean 失敗，嘗試手動刪除特定目錄
+        # If cargo clean failed, try manual deletion
         if (-not $cleanSuccess) {
-            Write-Host "  [WARN]  cargo clean 失敗（文件可能被占用），嘗試手動清理..." -ForegroundColor Yellow
+            Write-Host "  [WARN]  cargo clean failed (files may be locked), trying manual cleanup..." -ForegroundColor Yellow
             
-            # 嘗試刪除可能被占用的目錄（從最外層開始）
+            # Try to delete locked directories (from outermost layer)
             $targetDirsToRemove = @(
                 "target\release\bundle",
                 "target\release",
@@ -73,119 +74,125 @@ if (-not $SkipClean) {
                 $fullPath = Join-Path $tauriDir $dir
                 if (Test-Path $fullPath) {
                     try {
-                        # 先嘗試移除只讀屬性
+                        # Try to remove read-only attributes first
                         Get-ChildItem -Path $fullPath -Recurse -Force | ForEach-Object {
                             $_.Attributes = $_.Attributes -band (-bnot [System.IO.FileAttributes]::ReadOnly)
                         }
                         
                         Remove-Item -Recurse -Force $fullPath -ErrorAction Stop
-                        Write-Host "  [OK] 已刪除: $dir" -ForegroundColor Green
+                        Write-Host "  [OK] Deleted: $dir" -ForegroundColor Green
                         $removedAny = $true
-                    } catch {
-                        Write-Host "  [WARN]  無法刪除: $dir (可能被占用)" -ForegroundColor Yellow
+                    }
+                    catch {
+                        Write-Host "  [WARN]  Cannot delete: $dir (may be locked)" -ForegroundColor Yellow
                     }
                 }
             }
             
             if ($removedAny) {
-                Write-Host "  [OK] 部分清理完成" -ForegroundColor Green
-            } else {
-                Write-Host "  [WARN]  無法清理 Rust 構建產物（文件被占用）" -ForegroundColor Yellow
-                Write-Host "     解決方法：" -ForegroundColor DarkGray
-                Write-Host "     1. 關閉文件管理器（如果正在訪問該目錄）" -ForegroundColor DarkGray
-                Write-Host "     2. 關閉防毒軟體的實時掃描" -ForegroundColor DarkGray
-                Write-Host "     3. 關閉所有相關程序（VS Code、終端等）" -ForegroundColor DarkGray
-                Write-Host "     4. 重啟電腦後再試" -ForegroundColor DarkGray
+                Write-Host "  [OK] Partial cleanup completed" -ForegroundColor Green
+            }
+            else {
+                Write-Host "  [WARN]  Cannot clean Rust build artifacts (files are locked)" -ForegroundColor Yellow
+                Write-Host "     Solutions:" -ForegroundColor DarkGray
+                Write-Host "     1. Close file manager (if accessing the directory)" -ForegroundColor DarkGray
+                Write-Host "     2. Disable antivirus real-time scanning" -ForegroundColor DarkGray
+                Write-Host "     3. Close all related programs (VS Code, terminals, etc.)" -ForegroundColor DarkGray
+                Write-Host "     4. Restart computer and try again" -ForegroundColor DarkGray
             }
         }
         
         Set-Location $projectRoot
     }
     
-    Write-Host "  [OK] 構建產物已清理" -ForegroundColor Green
+    Write-Host "  [OK] Build artifacts cleaned" -ForegroundColor Green
     Write-Host ""
-} else {
-    Write-Host "[1/5] 跳過清理步驟" -ForegroundColor Gray
+}
+else {
+    Write-Host "[1/5] Skipping clean step" -ForegroundColor Gray
     Write-Host ""
 }
 
-# 步驟 2: 重新安裝依賴
+# Step 2: Reinstall dependencies
 if (-not $SkipInstall) {
-    Write-Host "[2/5] 重新安裝依賴..." -ForegroundColor Yellow
+    Write-Host "[2/5] Reinstalling dependencies..." -ForegroundColor Yellow
     
-    Write-Host "  執行: pnpm install" -ForegroundColor Gray
+    Write-Host "  Executing: pnpm install" -ForegroundColor Gray
     pnpm install
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  [FAIL] 依賴安裝失敗" -ForegroundColor Red
+        Write-Host "  [FAIL] Dependency installation failed" -ForegroundColor Red
         exit 1
     }
     
-    Write-Host "  [OK] 依賴安裝完成" -ForegroundColor Green
+    Write-Host "  [OK] Dependencies installed" -ForegroundColor Green
     Write-Host ""
-} else {
-    Write-Host "[2/5] 跳過依賴安裝" -ForegroundColor Gray
+}
+else {
+    Write-Host "[2/5] Skipping dependency installation" -ForegroundColor Gray
     Write-Host ""
 }
 
-# 步驟 3: 構建前端
+# Step 3: Build frontend
 if (-not $SkipBuild) {
-    Write-Host "[3/5] 構建前端..." -ForegroundColor Yellow
+    Write-Host "[3/5] Building frontend..." -ForegroundColor Yellow
     
-    Write-Host "  執行: pnpm build" -ForegroundColor Gray
+    Write-Host "  Executing: pnpm build" -ForegroundColor Gray
     pnpm build
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  [FAIL] 前端構建失敗" -ForegroundColor Red
+        Write-Host "  [FAIL] Frontend build failed" -ForegroundColor Red
         exit 1
     }
     
-    Write-Host "  [OK] 前端構建完成" -ForegroundColor Green
+    Write-Host "  [OK] Frontend build completed" -ForegroundColor Green
     Write-Host ""
-} else {
-    Write-Host "[3/5] 跳過前端構建" -ForegroundColor Gray
+}
+else {
+    Write-Host "[3/5] Skipping frontend build" -ForegroundColor Gray
     Write-Host ""
 }
 
-# 步驟 4: 構建 Tauri 應用
+# Step 4: Build Tauri application
 if (-not $SkipTauri) {
-    Write-Host "[4/5] 構建 Tauri 應用..." -ForegroundColor Yellow
+    Write-Host "[4/5] Building Tauri application..." -ForegroundColor Yellow
     
-    Write-Host "  執行: pnpm tauri build" -ForegroundColor Gray
-    Write-Host "  [WARN]  這可能需要幾分鐘時間..." -ForegroundColor Yellow
+    Write-Host "  Executing: pnpm tauri build" -ForegroundColor Gray
+    Write-Host "  [WARN]  This may take several minutes..." -ForegroundColor Yellow
     pnpm tauri build
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  [FAIL] Tauri 構建失敗" -ForegroundColor Red
+        Write-Host "  [FAIL] Tauri build failed" -ForegroundColor Red
         exit 1
     }
     
-    Write-Host "  [OK] Tauri 構建完成" -ForegroundColor Green
+    Write-Host "  [OK] Tauri build completed" -ForegroundColor Green
     Write-Host ""
-} else {
-    Write-Host "[4/5] 跳過 Tauri 構建" -ForegroundColor Gray
+}
+else {
+    Write-Host "[4/5] Skipping Tauri build" -ForegroundColor Gray
     Write-Host ""
 }
 
-# 步驟 5: 顯示構建結果
-Write-Host "[5/5] 構建結果" -ForegroundColor Yellow
+# Step 5: Display build results
+Write-Host "[5/5] Build Results" -ForegroundColor Yellow
 Write-Host ""
 
 $buildOutputs = @(
     @{
-        Name = "前端構建產物"
+        Name = "Frontend Build Output"
         Path = "out"
     },
     @{
-        Name = "Tauri 可執行文件"
+        Name = "Tauri Executable"
         Path = "src-tauri\target\release\note-gen.exe"
     },
     @{
-        Name = "MSI 安裝包"
+        Name = "MSI Installer"
         Path = "src-tauri\target\release\bundle\msi\*.msi"
     },
     @{
-        Name = "NSIS 安裝包"
+        Name = "NSIS Installer"
         Path = "src-tauri\target\release\bundle\nsis\*.exe"
     }
 )
@@ -200,12 +207,13 @@ foreach ($output in $buildOutputs) {
             $size = [math]::Round($file.Length / 1MB, 2)
             Write-Host "     - $($file.Name) ($size MB)" -ForegroundColor Gray
         }
-    } else {
-        Write-Host "  [WARN]  $($output.Name): 未找到" -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "  [WARN]  $($output.Name): Not found" -ForegroundColor Yellow
     }
 }
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  構建流程完成！" -ForegroundColor Green
+Write-Host "  Rebuild process completed!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan

@@ -1,0 +1,72 @@
+# Cursor AI Rules for NoteGen Project
+
+## Markdown Formatting Rules
+
+When creating or editing Markdown files, you MUST follow these rules:
+
+1. **Single H1 Heading (MD025)**
+   - Each Markdown document MUST have exactly ONE H1 heading (`# Title`)
+   - All other top-level sections MUST use H2 (`## Section`) or lower
+   - This prevents MD025 linting errors from markdownlint
+
+2. **Code Block Formatting**
+   - Use triple backticks (```) for code blocks
+   - Always specify language after opening backticks (e.g., ```powershell,```json, ```typescript)
+   - Ensure proper closing backticks on separate lines
+   - Code blocks must be properly indented if inside lists
+
+3. **List Formatting**
+   - Use consistent list markers (prefer `-` for unordered lists)
+   - Maintain proper indentation (2 spaces per level)
+   - Ensure blank lines before and after lists when appropriate
+   - Nested lists must be properly indented
+
+4. **Link and Image Formatting**
+   - Use proper Markdown link syntax: `[text](url)`
+   - Use proper image syntax: `![alt](url)`
+   - Avoid broken references
+   - Relative links should use proper paths
+
+5. **Table Formatting**
+   - Ensure proper table alignment
+   - Use pipe separators (`|`)
+   - Include header separator row with dashes (`|---|---|`)
+   - Align columns properly
+
+6. **File Encoding and Language**
+   - PowerShell scripts (`.ps1`) MUST use ASCII/English only (no Chinese characters)
+   - Markdown documentation files can contain Chinese, but must use UTF-8 encoding
+   - Ensure proper line endings (LF for Unix, CRLF for Windows as appropriate)
+
+7. **Validation Before Completion**
+   - Before finalizing any Markdown file, verify:
+     - Only one H1 heading exists
+     - All code blocks are properly closed
+     - No broken syntax
+     - Proper spacing between sections
+     - No trailing whitespace
+
+## PowerShell Script Rules
+
+1. **Language**: All PowerShell scripts MUST be in English only
+2. **Encoding**: Use UTF-8 encoding
+3. **Comments**: Use English for all comments and output messages
+4. **Error Handling**: Use proper try-catch blocks and error messages
+
+## Project-Specific Rules
+
+1. **Internationalization**:
+   - Application UI strings go in `messages/*.json` files
+   - Scripts and development tools use English only
+   - These are separate concerns - do not mix them
+
+2. **Documentation Structure**:
+   - Follow the structure defined in `docs/rules.md`
+   - Use `docs/todo/todoYYYY-MM-DD-XX.md` for temporary analysis files
+   - Keep overview docs in `docs/` directory
+
+3. **Code Style**:
+   - Follow existing code patterns
+   - Use TypeScript for frontend code
+   - Use Rust for Tauri backend code
+   - Maintain consistency with project conventions

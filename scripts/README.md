@@ -9,6 +9,7 @@
 清理所有構建產物和依賴，然後重新安裝和構建。
 
 **使用方法：**
+
 ```powershell
 # 完整重建（清理 + 安裝 + 構建前端 + 構建 Tauri）
 .\scripts\rebuild.ps1
@@ -24,6 +25,7 @@
 ```
 
 **參數說明：**
+
 - `-SkipClean`: 跳過清理步驟
 - `-SkipInstall`: 跳過依賴安裝
 - `-SkipBuild`: 跳過前端構建
@@ -34,11 +36,13 @@
 只清理構建產物和依賴，不重新安裝。
 
 **使用方法：**
+
 ```powershell
 .\scripts\clean.ps1
 ```
 
 **清理內容：**
+
 - `.next/` - Next.js 構建緩存
 - `out/` - Next.js 輸出目錄
 - `node_modules/` - Node.js 依賴
@@ -50,6 +54,7 @@
 啟動開發服務器（自動檢查並安裝依賴）。
 
 **使用方法：**
+
 ```powershell
 .\scripts\dev.ps1
 ```
@@ -59,11 +64,13 @@
 強制清理被占用的 Rust 構建產物（當 `cargo clean` 失敗時使用）。
 
 **使用方法：**
+
 ```powershell
 .\scripts\force-clean.ps1
 ```
 
 **功能：**
+
 - 檢查可能占用文件的進程
 - 分層刪除 target 目錄（從最外層開始）
 - 自動移除只讀屬性
@@ -72,16 +79,19 @@
 ## 快速命令
 
 ### 完整重建
+
 ```powershell
 .\scripts\rebuild.ps1
 ```
 
 ### 只清理
+
 ```powershell
 .\scripts\clean.ps1
 ```
 
 ### 啟動開發模式
+
 ```powershell
 .\scripts\dev.ps1
 ```
@@ -105,6 +115,7 @@ pnpm tauri build
 ## 注意事項
 
 1. **執行策略**：如果遇到「無法載入，因為在此系統上已停用指令碼執行」錯誤，請執行：
+
    ```powershell
    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
    ```

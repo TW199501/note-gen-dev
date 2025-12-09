@@ -95,11 +95,7 @@
     "bashIde.shellcheckPath": "shellcheck",
     "bashIde.shellcheckRun": "onSave",
     "bashIde.shfmtPath": "shfmt",
-    "bashIde.shfmtArguments": [
-        "-i",
-        "2",
-        "-ci"
-    ],
+    "bashIde.shfmtArguments": "-i 2 -ci",
     "bashIde.enableSourceErrorDiagnostics": true,
     "bashIde.globPattern": "**/*.{sh,bash}",
     // Shellscript 格式化設置

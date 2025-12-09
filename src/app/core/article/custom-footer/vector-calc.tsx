@@ -4,6 +4,7 @@ import useVectorStore from "@/stores/vector";
 import { Database, DatabaseZap, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function VectorCalc() {
     const {
@@ -12,8 +13,9 @@ export default function VectorCalc() {
         executeVectorCalculation,
         pendingVectorContent
     } = useArticleStore()
-    const { isVectorDbEnabled } = useVectorStore()
+    const { isVectorDbEnabled, setVectorDbEnabled } = useVectorStore()
     const t = useTranslations('article.footer.vectorCalc')
+    const router = useRouter()
     const [displayProgress, setDisplayProgress] = useState(0)
 
     // 平滑更新进度显示
@@ -29,11 +31,6 @@ export default function VectorCalc() {
         return () => clearInterval(interval)
     }, [vectorCalcProgress])
 
-    // 如果向量数据库未启用，不显示按钮
-    if (!isVectorDbEnabled) {
-        return null
-    }
-
     // 计算背景色（根据进度从透明到主题色）
     const getBackgroundStyle = () => {
         const opacity = Math.min(displayProgress / 100, 1)
@@ -42,7 +39,14 @@ export default function VectorCalc() {
         }
     }
 
-    const handleClick = () => {
+    const handleClick = async () => {
+        // 如果向量數據庫未啟用，跳轉到設置頁面
+        if (!isVectorDbEnabled) {
+            router.push('/core/setting/rag')
+            return
+        }
+
+        // 如果已啟用且有待計算內容，執行計算
         if (!isVectorCalculating && pendingVectorContent) {
             executeVectorCalculation()
         }
@@ -50,9 +54,14 @@ export default function VectorCalc() {
 
     // 根据状态选择图标
     const getIcon = () => {
+        // 如果向量數據庫未啟用，顯示禁用狀態的圖標（使用更明顯的樣式）
+        if (!isVectorDbEnabled) {
+            return <Database className="!size-3.5 opacity-60 text-muted-foreground" />
+        }
+
         if (isVectorCalculating) {
             // 计算中：旋转的加载图标
-            return <Loader2 className="!size-3.5 animate-spin" />
+            return <Loader2 className="!size-3.5 animate-spin text-primary" />
         } else if (pendingVectorContent) {
             // 待计算：带闪电的数据库图标
             return <DatabaseZap className="!size-3.5" />
@@ -64,6 +73,11 @@ export default function VectorCalc() {
 
     // 根据状态生成tooltip文本
     const getTooltipText = () => {
+        // 如果向量數據庫未啟用，提示用戶啟用
+        if (!isVectorDbEnabled) {
+            return t('disabled')
+        }
+
         if (isVectorCalculating) {
             return t('calculating')
         } else if (pendingVectorContent) {
@@ -79,14 +93,16 @@ export default function VectorCalc() {
             size="sm"
             className="h-5 px-1 text-xs relative overflow-hidden"
             onClick={handleClick}
-            disabled={isVectorCalculating || !pendingVectorContent}
-            title={`${t('tooltip')} - ${getTooltipText()}`}
+            disabled={isVectorDbEnabled && (isVectorCalculating || !pendingVectorContent)}
+            title={!isVectorDbEnabled ? t('disabledTooltip') : `${t('tooltip')} - ${getTooltipText()}`}
         >
-            <div
-                className="absolute inset-0 transition-all duration-100"
-                style={getBackgroundStyle()}
-            />
-            <div className="relative flex items-center">
+            {isVectorDbEnabled && (
+                <div
+                    className="absolute inset-0 transition-all duration-100"
+                    style={getBackgroundStyle()}
+                />
+            )}
+            <div className="relative flex items-center z-10">
                 {getIcon()}
             </div>
         </Button>
