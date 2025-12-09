@@ -21,7 +21,13 @@
         "language": "語言",
         "success": "成功",
         "error": "失敗",
-        "defaultFileName": "未命名文件"
+        "defaultFileName": "未命名文件",
+        "errors": {
+            "readDirectoryFailed": "讀取目錄 {dirPath} 失敗",
+            "fuzzySearchError": "模糊搜索出錯",
+            "parallelFuzzySearchError": "並行模糊搜索出錯",
+            "ocrFailed": "OCR 識別失敗"
+        }
     },
     "settings": {
         "others": "高級",
@@ -242,6 +248,25 @@
         "audio": {
             "title": "語音設置",
             "desc": "在這裡，你可以配置語音相關設置，包括文本轉語音（朗讀）和語音轉文本（錄音識別）功能。",
+            "error": {
+                "textEmpty": "文本內容為空",
+                "speechSynthesisNotSupported": "當前瀏覽器不支持語音合成功能",
+                "audioModelNotConfigured": "未配置音頻模型",
+                "audioModelNotFound": "未找到音頻模型配置",
+                "audioModelIncomplete": "音頻模型配置不完整",
+                "audioGenerationFailed": "音頻生成失敗: {status} {errorText}",
+                "audioGenerationError": "音頻生成錯誤",
+                "audioContextDestroyed": "音頻上下文已被銷毀",
+                "audioDecodeFailed": "音頻解碼失敗: {error}",
+                "audioPlayFailed": "音頻播放失敗: {error}",
+                "speechFailed": "朗讀失敗",
+                "sttModelNotConfigured": "未配置語音識別模型",
+                "sttModelNotFound": "未找到語音識別模型配置",
+                "sttModelIncomplete": "語音識別模型配置不完整",
+                "sttFailed": "語音識別失敗: {status} {errorText}",
+                "sttError": "語音識別錯誤",
+                "conversionFailed": "音頻轉換失敗"
+            },
             "tts": {
                 "title": "文本轉語音（TTS）",
                 "desc": "配置朗讀功能，為聊天內容提供語音播放。",
@@ -1261,6 +1286,28 @@
         "imageRepo": "圖床倉庫",
         "articleRepo": "文章倉庫"
     },
+    "rag": {
+        "error": {
+            "processFileFailed": "處理文件 {filePath} 失敗",
+            "cannotCalculateEmbedding": "無法計算文件 {filename} 第 {chunkIndex} 塊的向量",
+            "processWorkspaceFailed": "處理工作區Markdown文件失敗",
+            "vectorProcessingFailed": "向量處理失敗",
+            "readFileFailed": "讀取文件 {filePath} 內容失敗",
+            "collectMarkdownFailed": "收集Markdown內容失敗",
+            "fuzzySearchFailed": "模糊搜索失敗",
+            "vectorSearchFailed": "向量搜索失敗",
+            "getContextFailed": "獲取查詢上下文失敗",
+            "updateVectorFailed": "更新文件 {filename} 的向量失敗",
+            "embeddingModelCheckFailed": "嵌入模型檢查失敗"
+        },
+        "common": {
+            "unnamedFile": "未命名文件",
+            "filePrefix": "文件："
+        },
+        "toast": {
+            "vectorDatabaseUpdate": "向量數據庫更新"
+        }
+    },
     "ai": {
         "thinking": "思考",
         "error": {
@@ -1276,8 +1323,10 @@
             "embeddingRateLimitTitle": "等待模型回應",
             "embeddingRateLimitWaiting": "模型可能達到速率限制，正在等待 {waitTime} 秒後重試 ({retryCount}/{maxRetries})...",
             "embeddingResultFormatError": "嵌入結果格式不正確",
+            "embeddingRequestTimeout": "請求超時（{timeout} 秒）",
             "rerankRequestFailed": "重排序請求失敗: {status} {statusText}",
             "rerankResultFormatError": "重排序結果格式不正確",
+            "toolCallFailed": "工具調用失敗",
             "rerankFailed": "重排序失敗",
             "rerankCheckFailed": "重排序模型檢查失敗",
             "maxToolCallsReached": "達到最大工具調用次數限制",

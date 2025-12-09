@@ -23,7 +23,13 @@
         "prompt": "Prompt",
         "success": "Success",
         "error": "Failed",
-        "defaultFileName": "Untitled"
+        "defaultFileName": "Untitled",
+        "errors": {
+            "readDirectoryFailed": "Failed to read directory {dirPath}",
+            "fuzzySearchError": "Fuzzy search error",
+            "parallelFuzzySearchError": "Parallel fuzzy search error",
+            "ocrFailed": "OCR recognition failed"
+        }
     },
     "settings": {
         "others": "Advanced",
@@ -270,6 +276,25 @@
         "audio": {
             "title": "Audio Settings",
             "desc": "Here, you can configure audio settings, including text-to-speech (TTS) and speech-to-text (STT) functions.",
+            "error": {
+                "textEmpty": "Text content is empty",
+                "speechSynthesisNotSupported": "Current browser does not support speech synthesis",
+                "audioModelNotConfigured": "Audio model not configured",
+                "audioModelNotFound": "Audio model configuration not found",
+                "audioModelIncomplete": "Audio model configuration incomplete",
+                "audioGenerationFailed": "Audio generation failed: {status} {errorText}",
+                "audioGenerationError": "Audio generation error",
+                "audioContextDestroyed": "Audio context has been destroyed",
+                "audioDecodeFailed": "Audio decode failed: {error}",
+                "audioPlayFailed": "Audio play failed: {error}",
+                "speechFailed": "Speech failed",
+                "sttModelNotConfigured": "Speech recognition model not configured",
+                "sttModelNotFound": "Speech recognition model configuration not found",
+                "sttModelIncomplete": "Speech recognition model configuration incomplete",
+                "sttFailed": "Speech recognition failed: {status} {errorText}",
+                "sttError": "Speech recognition error",
+                "conversionFailed": "Audio conversion failed"
+            },
             "tts": {
                 "title": "Text-to-Speech (TTS)",
                 "desc": "Configure read aloud functionality to provide voice playback for chat content.",
@@ -1250,6 +1275,28 @@
         "imageRepo": "Image Repository",
         "articleRepo": "Article Repository"
     },
+    "rag": {
+        "error": {
+            "processFileFailed": "Failed to process file {filePath}",
+            "cannotCalculateEmbedding": "Cannot calculate embedding for file {filename} chunk {chunkIndex}",
+            "processWorkspaceFailed": "Failed to process workspace Markdown files",
+            "vectorProcessingFailed": "Vector processing failed",
+            "readFileFailed": "Failed to read file {filePath} content",
+            "collectMarkdownFailed": "Failed to collect Markdown content",
+            "fuzzySearchFailed": "Fuzzy search failed",
+            "vectorSearchFailed": "Vector search failed",
+            "getContextFailed": "Failed to get query context",
+            "updateVectorFailed": "Failed to update vector for file {filename}",
+            "embeddingModelCheckFailed": "Embedding model check failed"
+        },
+        "common": {
+            "unnamedFile": "Unnamed file",
+            "filePrefix": "File: "
+        },
+        "toast": {
+            "vectorDatabaseUpdate": "Vector database update"
+        }
+    },
     "ai": {
         "thinking": "Thinking",
         "error": {
@@ -1265,8 +1312,10 @@
             "embeddingRateLimitTitle": "Waiting for model response",
             "embeddingRateLimitWaiting": "Model may have reached rate limit, waiting {waitTime} seconds before retry ({retryCount}/{maxRetries})...",
             "embeddingResultFormatError": "Embedding result format incorrect",
+            "embeddingRequestTimeout": "Request timeout ({timeout} seconds)",
             "rerankRequestFailed": "Rerank request failed: {status} {statusText}",
             "rerankResultFormatError": "Rerank result format incorrect",
+            "toolCallFailed": "Tool call failed",
             "rerankFailed": "Rerank failed",
             "rerankCheckFailed": "Rerank model check failed",
             "maxToolCallsReached": "Maximum tool call iterations reached",

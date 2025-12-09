@@ -54,6 +54,12 @@ tauri-plugin-process = "2.3"
 jieba-rs = { version = "0.7", features = ["textrank"] }
 machine-uid = "0.5"
 
+# 修復安全漏洞：glib 和 xcb 只在 Linux 上需要（GTK/X11 相關）
+# 將它們放在 Linux 平台特定依賴中，避免在 Windows/macOS 上構建時出現問題
+[target.'cfg(target_os = "linux")'.dependencies]
+glib = "=0.20.12"
+xcb = "=1.6.0"
+
 [target.'cfg(target_os = "android")'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
 
@@ -63,3 +69,8 @@ core-graphics = "0.23"
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies.tauri]
 version = "2"
 features = ["tray-icon"]
+
+# 修復安全漏洞
+# 強制使用安全版本以修復已知漏洞
+# 注意：glib 和 xcb 已在 [dependencies] 中直接聲明，使用直接依賴來覆蓋傳遞依賴
+# [patch.crates-io] 不能用於覆蓋同一個源（crates.io）的版本，因此使用直接依賴

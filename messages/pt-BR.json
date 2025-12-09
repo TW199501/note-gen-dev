@@ -23,7 +23,13 @@
         "prompt": "Instrução",
         "success": "Sucesso",
         "error": "Falha",
-        "defaultFileName": "Sem Título"
+        "defaultFileName": "Sem Título",
+        "errors": {
+            "readDirectoryFailed": "Falha ao ler o diretório {dirPath}",
+            "fuzzySearchError": "Erro na busca fuzzy",
+            "parallelFuzzySearchError": "Erro na busca fuzzy paralela",
+            "ocrFailed": "Falha no reconhecimento OCR"
+        }
     },
     "settings": {
         "others": "Avançado",
@@ -270,6 +276,25 @@
         "audio": {
             "title": "Configurações de Áudio",
             "desc": "Aqui, você pode configurar as definições de áudio, incluindo as funções de conversão de texto em fala (TTS) e fala em texto (STT).",
+            "error": {
+                "textEmpty": "O conteúdo do texto está vazio",
+                "speechSynthesisNotSupported": "O navegador atual não suporta síntese de voz",
+                "audioModelNotConfigured": "Modelo de áudio não configurado",
+                "audioModelNotFound": "Configuração do modelo de áudio não encontrada",
+                "audioModelIncomplete": "Configuração do modelo de áudio incompleta",
+                "audioGenerationFailed": "Falha na geração de áudio: {status} {errorText}",
+                "audioGenerationError": "Erro na geração de áudio",
+                "audioContextDestroyed": "Contexto de áudio foi destruído",
+                "audioDecodeFailed": "Falha na decodificação de áudio: {error}",
+                "audioPlayFailed": "Falha na reprodução de áudio: {error}",
+                "speechFailed": "Falha na fala",
+                "sttModelNotConfigured": "Modelo de reconhecimento de voz não configurado",
+                "sttModelNotFound": "Configuração do modelo de reconhecimento de voz não encontrada",
+                "sttModelIncomplete": "Configuração do modelo de reconhecimento de voz incompleta",
+                "sttFailed": "Falha no reconhecimento de voz: {status} {errorText}",
+                "sttError": "Erro no reconhecimento de voz",
+                "conversionFailed": "Falha na conversão de áudio"
+            },
             "tts": {
                 "title": "Texto para Fala (TTS)",
                 "desc": "Configure a funcionalidade de leitura em voz alta para fornecer reprodução de voz para o conteúdo do chat.",
@@ -1237,6 +1262,28 @@
         "imageRepo": "Repositório de Imagens",
         "articleRepo": "Repositório de Artigos"
     },
+    "rag": {
+        "error": {
+            "processFileFailed": "Falha ao processar arquivo {filePath}",
+            "cannotCalculateEmbedding": "Não foi possível calcular o embedding para o arquivo {filename} chunk {chunkIndex}",
+            "processWorkspaceFailed": "Falha ao processar arquivos Markdown do workspace",
+            "vectorProcessingFailed": "Falha no processamento de vetores",
+            "readFileFailed": "Falha ao ler o conteúdo do arquivo {filePath}",
+            "collectMarkdownFailed": "Falha ao coletar conteúdo Markdown",
+            "fuzzySearchFailed": "Falha na busca fuzzy",
+            "vectorSearchFailed": "Falha na busca vetorial",
+            "getContextFailed": "Falha ao obter contexto da consulta",
+            "updateVectorFailed": "Falha ao atualizar vetor do arquivo {filename}",
+            "embeddingModelCheckFailed": "Falha na verificação do modelo de embedding"
+        },
+        "common": {
+            "unnamedFile": "Arquivo sem nome",
+            "filePrefix": "Arquivo: "
+        },
+        "toast": {
+            "vectorDatabaseUpdate": "Atualização do banco de dados vetorial"
+        }
+    },
     "ai": {
         "thinking": "Pensando",
         "error": {
@@ -1252,8 +1299,10 @@
             "embeddingRateLimitTitle": "Aguardando resposta do modelo",
             "embeddingRateLimitWaiting": "O modelo pode ter atingido o limite de taxa, aguardando {waitTime} segundos antes de tentar novamente ({retryCount}/{maxRetries})...",
             "embeddingResultFormatError": "Formato do resultado de embedding incorreto",
+            "embeddingRequestTimeout": "Tempo limite da solicitação ({timeout} segundos)",
             "rerankRequestFailed": "Falha na solicitação de reordenação: {status} {statusText}",
             "rerankResultFormatError": "Formato do resultado de reordenação incorreto",
+            "toolCallFailed": "Falha na chamada da ferramenta",
             "rerankFailed": "Reordenação falhou",
             "rerankCheckFailed": "Verificação do modelo de reordenação falhou",
             "maxToolCallsReached": "Limite máximo de iterações de chamada de ferramenta atingido",

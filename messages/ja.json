@@ -21,7 +21,13 @@
         "language": "言語",
         "success": "成功",
         "error": "失敗",
-        "defaultFileName": "無題のドキュメント"
+        "defaultFileName": "無題のドキュメント",
+        "errors": {
+            "readDirectoryFailed": "ディレクトリ {dirPath} の読み取りに失敗しました",
+            "fuzzySearchError": "ファジー検索エラー",
+            "parallelFuzzySearchError": "並列ファジー検索エラー",
+            "ocrFailed": "OCR認識に失敗しました"
+        }
     },
     "settings": {
         "others": "その他",
@@ -242,6 +248,25 @@
             "title": "音声読み上げ",
             "desc": "ここでは、音声読み上げ関連の設定を構成し、チャットコンテンツに音声再生機能を提供できます。",
             "noModel": "モデルを使用しない",
+            "error": {
+                "textEmpty": "テキスト内容が空です",
+                "speechSynthesisNotSupported": "現在のブラウザは音声合成機能をサポートしていません",
+                "audioModelNotConfigured": "音声モデルが設定されていません",
+                "audioModelNotFound": "音声モデル設定が見つかりません",
+                "audioModelIncomplete": "音声モデル設定が不完全です",
+                "audioGenerationFailed": "音声生成失敗: {status} {errorText}",
+                "audioGenerationError": "音声生成エラー",
+                "audioContextDestroyed": "音声コンテキストが破棄されました",
+                "audioDecodeFailed": "音声デコード失敗: {error}",
+                "audioPlayFailed": "音声再生失敗: {error}",
+                "speechFailed": "読み上げ失敗",
+                "sttModelNotConfigured": "音声認識モデルが設定されていません",
+                "sttModelNotFound": "音声認識モデル設定が見つかりません",
+                "sttModelIncomplete": "音声認識モデル設定が不完全です",
+                "sttFailed": "音声認識失敗: {status} {errorText}",
+                "sttError": "音声認識エラー",
+                "conversionFailed": "音声変換失敗"
+            },
             "options": {
                 "audioModel": {
                     "title": "音声モデル",
@@ -1203,6 +1228,28 @@
         "imageRepo": "画像ホスティング倉庫",
         "articleRepo": "記事倉庫"
     },
+    "rag": {
+        "error": {
+            "processFileFailed": "ファイル {filePath} の処理に失敗しました",
+            "cannotCalculateEmbedding": "ファイル {filename} のチャンク {chunkIndex} の埋め込みを計算できません",
+            "processWorkspaceFailed": "ワークスペースのMarkdownファイルの処理に失敗しました",
+            "vectorProcessingFailed": "ベクトル処理に失敗しました",
+            "readFileFailed": "ファイル {filePath} の内容の読み取りに失敗しました",
+            "collectMarkdownFailed": "Markdownコンテンツの収集に失敗しました",
+            "fuzzySearchFailed": "ファジー検索に失敗しました",
+            "vectorSearchFailed": "ベクトル検索に失敗しました",
+            "getContextFailed": "クエリコンテキストの取得に失敗しました",
+            "updateVectorFailed": "ファイル {filename} のベクトルの更新に失敗しました",
+            "embeddingModelCheckFailed": "埋め込みモデルのチェックに失敗しました"
+        },
+        "common": {
+            "unnamedFile": "無名ファイル",
+            "filePrefix": "ファイル："
+        },
+        "toast": {
+            "vectorDatabaseUpdate": "ベクトルデータベース更新"
+        }
+    },
     "ai": {
         "thinking": "考えることです",
         "error": {
@@ -1218,8 +1265,10 @@
             "embeddingRateLimitTitle": "モデルの応答を待機中",
             "embeddingRateLimitWaiting": "モデルがレート制限に達した可能性があります。{waitTime} 秒待機してから再試行します ({retryCount}/{maxRetries})...",
             "embeddingResultFormatError": "埋め込み結果の形式が正しくありません",
+            "embeddingRequestTimeout": "リクエストタイムアウト（{timeout} 秒）",
             "rerankRequestFailed": "再ランキングリクエスト失敗: {status} {statusText}",
             "rerankResultFormatError": "再ランキング結果の形式が正しくありません",
+            "toolCallFailed": "ツール呼び出し失敗",
             "rerankFailed": "再ランキング失敗",
             "rerankCheckFailed": "再ランキングモデルチェック失敗",
             "maxToolCallsReached": "最大ツール呼び出し回数制限に達しました",

@@ -1,5 +1,5 @@
 import { readTextFile, readDir, BaseDirectory, DirEntry } from "@tauri-apps/plugin-fs";
-import { fetchEmbedding, rerankDocuments } from "./ai";
+import { fetchEmbedding, rerankDocuments, getTranslation } from "./ai";
 import {
     upsertVectorDocument,
     deleteVectorDocumentsByFilename,
@@ -156,11 +156,17 @@ export async function processMarkdownFile(
                 embedding: JSON.stringify(embedding),
                 updated_at: Date.now()
             });
+
+            // 在同一個文件的多個 chunk 之間添加短暫延遲，避免請求過於頻繁
+            if (i < chunks.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 200)); // 200ms 延遲
+            }
         }
 
         return true;
     } catch (error) {
-        console.error(`处理文件 ${filePath} 失败:`, error);
+        const errorMsg = await getTranslation('rag.error.processFileFailed', { filePath });
+        console.error(errorMsg, error);
         return false;
     }
 }
@@ -262,8 +268,13 @@ export async function processAllMarkdownFiles(): Promise<{
                             throw error;
                         }
                         result.failed++;
-                        console.error(`处理文件 ${filePath} 失败:`, error);
+                        const errorMsg = await getTranslation('rag.error.processFileFailed', { filePath });
+                        console.error(errorMsg, error);
                     }
+
+                    // 在處理每個文件之間添加延遲，避免批量請求過於頻繁觸發速率限制
+                    // 延遲 500ms，給 API 服務器一些緩衝時間
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
 
                 // 递归处理子目录
@@ -275,12 +286,14 @@ export async function processAllMarkdownFiles(): Promise<{
         await processTree(fileTree);
         return result;
     } catch (error: any) {
-        console.error('处理工作区Markdown文件失败:', error);
+        const errorMsg = await getTranslation('rag.error.processWorkspaceFailed');
+        console.error(errorMsg, error);
         // 如果是 403 錯誤，顯示詳細的錯誤信息
         if (error?.message && (error.message.includes('403') || error.message.includes('Forbidden'))) {
+            const title = await getTranslation('rag.error.vectorProcessingFailed');
             toast({
-                title: '向量處理失敗',
-                description: error.message || '嵌入請求失敗: 403 Forbidden',
+                title,
+                description: error.message || await getTranslation('ai.error.embeddingRequestFailed403'),
                 variant: 'destructive',
             });
         }
@@ -381,7 +394,8 @@ async function collectMarkdownContents(): Promise<SearchItem[]> {
                             search_type: 'markdown'
                         });
                     } catch (error) {
-                        console.error(`读取文件 ${filePath} 内容失败:`, error);
+                        const errorMsg = await getTranslation('rag.error.readFileFailed', { filePath });
+                        console.error(errorMsg, error);
                     }
                 }
 
@@ -395,7 +409,8 @@ async function collectMarkdownContents(): Promise<SearchItem[]> {
         await processTree(fileTree);
         return items;
     } catch (error) {
-        console.error('收集Markdown内容失败:', error);
+        const errorMsg = await getTranslation('rag.error.collectMarkdownFailed');
+        console.error(errorMsg, error);
         return [];
     }
 }
@@ -433,6 +448,8 @@ export async function getContextForQuery(keywords: Keyword[]): Promise<{ context
         try {
             // 收集所有Markdown文件内容
             const items = await collectMarkdownContents();
+            // 在循環外獲取翻譯，避免重複調用
+            const unnamedFile = await getTranslation('rag.common.unnamedFile');
             if (items.length > 0) {
                 // 为每个关键词单独进行搜索
                 for (const keyword of sortedKeywords) {
@@ -472,7 +489,7 @@ export async function getContextForQuery(keywords: Keyword[]): Promise<{ context
                                 const contextSnippet = content.substring(startIdx, endIdx);
 
                                 allContexts.push({
-                                    filename: item.title || '未命名文件',
+                                    filename: item.title || unnamedFile,
                                     content: contextSnippet,
                                     score: finalScore,
                                     keyword: keyword.text,  // 记录匹配的关键词
@@ -484,7 +501,8 @@ export async function getContextForQuery(keywords: Keyword[]): Promise<{ context
                 }
             }
         } catch (error) {
-            console.error('模糊搜索失败:', error);
+            const errorMsg = await getTranslation('rag.error.fuzzySearchFailed');
+            console.error(errorMsg, error);
         }
 
         // 2. 使用向量搜索找到相关文档
@@ -515,7 +533,8 @@ export async function getContextForQuery(keywords: Keyword[]): Promise<{ context
                 }
             }
         } catch (error) {
-            console.error('向量搜索失败:', error);
+            const errorMsg = await getTranslation('rag.error.vectorSearchFailed');
+            console.error(errorMsg, error);
         }
 
         // 如果没有找到任何相关上下文，返回空结果
@@ -546,17 +565,19 @@ export async function getContextForQuery(keywords: Keyword[]): Promise<{ context
         const sources = Array.from(new Set(finalContexts.map(ctx => ctx.filename)));
 
         // 构建最终的上下文字符串，將 Markdown 轉換為純文本以避免干擾 AI
+        const filePrefix = await getTranslation('rag.common.filePrefix');
         const context = finalContexts.map(ctx => {
             // 將 Markdown 內容轉換為純文本
             const plainTextContent = markdownToPlainText(ctx.content);
-            return `文件：${ctx.filename}
+            return `${filePrefix}${ctx.filename}
 ${plainTextContent}
 `;
         }).join('\n---\n\n');
 
         return { context, sources };
     } catch (error) {
-        console.error('获取查询上下文失败:', error);
+        const errorMsg = await getTranslation('rag.error.getContextFailed');
+        console.error(errorMsg, error);
         return { context: '', sources: [] };
     }
 }
@@ -570,7 +591,8 @@ export async function handleFileUpdate(filename: string, content: string): Promi
     try {
         await processMarkdownFile(filename, content);
     } catch (error) {
-        console.error(`更新文件 ${filename} 的向量失败:`, error);
+        const errorMsg = await getTranslation('rag.error.updateVectorFailed', { filename });
+        console.error(errorMsg, error);
     }
 }
 
@@ -580,10 +602,12 @@ export async function handleFileUpdate(filename: string, content: string): Promi
 export async function checkEmbeddingModelAvailable(): Promise<boolean> {
     try {
         // 尝试计算一个简单文本的向量
-        const embedding = await fetchEmbedding('测试嵌入模型');
+        // 使用一個簡單的測試文本，不需要翻譯
+        const embedding = await fetchEmbedding('test');
         return !!embedding;
     } catch (error) {
-        console.error('嵌入模型检查失败:', error);
+        const errorMsg = await getTranslation('rag.error.embeddingModelCheckFailed');
+        console.error(errorMsg, error);
         return false;
     }
 }
@@ -591,9 +615,10 @@ export async function checkEmbeddingModelAvailable(): Promise<boolean> {
 /**
  * 显示向量处理进度的toast
  */
-export function showVectorProcessingToast(message: string) {
+export async function showVectorProcessingToast(message: string) {
+    const title = await getTranslation('rag.toast.vectorDatabaseUpdate');
     toast({
-        title: '向量数据库更新',
+        title,
         description: message,
     });
 }

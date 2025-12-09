@@ -7,11 +7,46 @@ import { fetch } from "@tauri-apps/plugin-http";
 /**
  * 獲取翻譯文本的輔助函數
  */
-async function getTranslation(key: string, params?: Record<string, any>): Promise<string> {
+export async function getTranslation(key: string, params?: Record<string, any>): Promise<string> {
     try {
-        const store = await Store.load('store.json');
-        const locale = await store.get<string>('locale') || 'zh';
-        const messages = await import(`../../messages/${locale}.json`);
+        // 優先從 localStorage 讀取語言設置（與 NextIntlProvider 保持一致）
+        let locale: string = 'zh';
+        if (typeof window !== 'undefined') {
+            const savedLocale = localStorage.getItem('app-language');
+            if (savedLocale) {
+                locale = savedLocale;
+            } else {
+                // 如果 localStorage 沒有，嘗試從 store 讀取
+                const store = await Store.load('store.json');
+                const storeLocale = await store.get<string>('locale');
+                if (storeLocale) {
+                    locale = storeLocale;
+                }
+            }
+        } else {
+            // SSR 環境，從 store 讀取
+            const store = await Store.load('store.json');
+            const storeLocale = await store.get<string>('locale');
+            if (storeLocale) {
+                locale = storeLocale;
+            }
+        }
+
+        // 調試：記錄實際使用的語言（僅在開發環境）
+        if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+            console.debug(`[getTranslation] Using locale: ${locale} for key: ${key}`);
+        }
+
+        // 載入對應語言的翻譯文件
+        let messages: any;
+        try {
+            messages = await import(`../../messages/${locale}.json`);
+        } catch (importError) {
+            // 如果載入失敗（例如文件不存在），回退到簡體中文
+            console.warn(`Failed to load messages for locale: ${locale}, falling back to zh`, importError);
+            messages = await import(`../../messages/zh.json`);
+        }
+
         const keys = key.split('.');
         let value: any = messages.default;
         for (const k of keys) {
@@ -27,20 +62,23 @@ async function getTranslation(key: string, params?: Record<string, any>): Promis
             }
             return value;
         }
-        // 如果找不到翻譯，返回中文後備
-        const zhMessages = await import(`../../messages/zh.json`);
-        let zhValue: any = zhMessages.default;
+
+        // 如果找不到翻譯，回退到簡體中文作為後備語言
+        // 所有語言（包括繁體中文）都回退到簡體中文，因為簡體中文是最完整的翻譯
+        const fallbackLocale = 'zh';
+        const fallbackMessages = await import(`../../messages/${fallbackLocale}.json`);
+        let fallbackValue: any = fallbackMessages.default;
         for (const k of keys) {
-            zhValue = zhValue?.[k];
-            if (zhValue === undefined) break;
+            fallbackValue = fallbackValue?.[k];
+            if (fallbackValue === undefined) break;
         }
-        if (typeof zhValue === 'string') {
+        if (typeof fallbackValue === 'string') {
             if (params) {
-                return zhValue.replace(/\{(\w+)\}/g, (match, paramKey) => {
+                return fallbackValue.replace(/\{(\w+)\}/g, (match, paramKey) => {
                     return params[paramKey]?.toString() || match;
                 });
             }
-            return zhValue;
+            return fallbackValue;
         }
         return key; // 如果都找不到，返回鍵值本身
     } catch (error) {
@@ -423,11 +461,13 @@ export async function fetchEmbedding(text: string, retryCount: number = 0): Prom
                             throw new Error(apiKeyErrorMsg);
                         }
 
-                        // 如果不是 API key 錯誤，可能是速率限制，進行重試
-                        const maxRetries = 3;
+                        // 如果不是 API key 錯誤，可能是速率限制，持續重試
+                        // 設置一個較大的最大重試次數（100次），避免真正的無限循環
+                        const maxRetries = 100;
                         if (retryCount < maxRetries) {
-                            // 等待時間遞增：5秒、10秒、15秒
-                            const waitTime = (retryCount + 1) * 5000;
+                            // 等待時間遞增：5秒、10秒、15秒、20秒、25秒，之後固定為30秒
+                            const maxWaitTime = 30000; // 最大等待時間30秒
+                            const waitTime = Math.min((retryCount + 1) * 5000, maxWaitTime);
                             const waitingMsg = await getTranslation('ai.error.embeddingRateLimitWaiting', {
                                 waitTime: (waitTime / 1000).toString(),
                                 retryCount: (retryCount + 1).toString(),
@@ -445,8 +485,8 @@ export async function fetchEmbedding(text: string, retryCount: number = 0): Prom
                             await new Promise(resolve => setTimeout(resolve, waitTime));
                             return fetchEmbedding(text, retryCount + 1);
                         } else {
-                            // 達到最大重試次數，可能是 API key 問題或持續的速率限制
-                            // 如果重試多次後仍然失敗，更可能是 API key 問題
+                            // 達到最大重試次數（100次），可能是持續的速率限制或服務器問題
+                            // 顯示錯誤提示，但使用 default 變體，因為這不是 API Key 問題
                             const errorMsg = await getTranslation('ai.error.embeddingRequestFailed403');
                             if (typeof window !== 'undefined') {
                                 (window as any).__lastEmbeddingError = errorMsg;
@@ -454,7 +494,7 @@ export async function fetchEmbedding(text: string, retryCount: number = 0): Prom
                             toast({
                                 title: await getTranslation('ai.error.title'),
                                 description: errorMsg,
-                                variant: 'destructive',
+                                variant: 'default', // 使用 default 而不是 destructive，因為這可能是持續的速率限制
                             });
                             throw new Error(errorMsg);
                         }
@@ -483,9 +523,10 @@ export async function fetchEmbedding(text: string, retryCount: number = 0): Prom
                 clearTimeout(timeoutId);
                 // 如果是超時錯誤，拋出具體錯誤
                 if (fetchError?.name === 'AbortError' || fetchError?.message?.includes('aborted')) {
+                    const timeoutMsg = await getTranslation('ai.error.embeddingRequestTimeout', { timeout: '120' });
                     const errorMsg = await getTranslation('ai.error.embeddingRequestFailed', {
                         status: 'TIMEOUT',
-                        statusText: '請求超時（120 秒）'
+                        statusText: timeoutMsg
                     });
                     if (typeof window !== 'undefined') {
                         (window as any).__lastEmbeddingError = errorMsg;
@@ -552,7 +593,11 @@ export async function rerankDocuments(
         });
 
         if (!response.ok) {
-            throw new Error(`重排序请求失败: ${response.status} ${response.statusText}`);
+            const errorMsg = await getTranslation('ai.error.rerankRequestFailed', {
+                status: response.status.toString(),
+                statusText: response.statusText
+            });
+            throw new Error(errorMsg);
         }
 
         // 解析响应
@@ -560,7 +605,8 @@ export async function rerankDocuments(
 
         // 检查响应格式
         if (!data || !data.results) {
-            throw new Error('重排序结果格式不正确');
+            const errorMsg = await getTranslation('ai.error.rerankResultFormatError');
+            throw new Error(errorMsg);
         }
 
         // 处理重排序结果
@@ -877,7 +923,8 @@ export async function fetchAiStream(
                         })
 
                     } catch (error) {
-                        console.error('工具调用失败:', error)
+                        const errorMsg = await getTranslation('ai.error.toolCallFailed');
+                        console.error(errorMsg, error)
 
                         // 更新 MCP 工具调用状态为错误
                         if (chatId && mcpToolCallId) {
