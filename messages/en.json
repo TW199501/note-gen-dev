@@ -1500,13 +1500,17 @@
                 "filterQuickSync": "Filter Quick Syncs",
                 "committedAt": "committed at",
                 "pull": "Pull",
-                "quickSync": "Quick Sync"
+                "quickSync": "Quick Sync",
+                "getHistoryFailed": "Failed to get file history content",
+                "getHistoryFailedWithService": "{service} failed to get file history content"
             },
             "vectorCalc": {
                 "tooltip": "Vector Calculation: Auto-calculate 30s after editing, or click to calculate now",
                 "calculating": "Calculating",
                 "pending": "Pending {progress}%",
-                "synced": "Synced"
+                "synced": "Synced",
+                "disabled": "Disabled",
+                "disabledTooltip": "Vector database is not enabled, click to go to settings page to enable"
             },
             "export": {
                 "buttonLabel": "Export Article",

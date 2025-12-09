@@ -1476,13 +1476,17 @@
                 "filterQuickSync": "過濾快速同步",
                 "committedAt": "提交於",
                 "pull": "拉取",
-                "quickSync": "快速同步"
+                "quickSync": "快速同步",
+                "getHistoryFailed": "獲取文件歷史內容失敗",
+                "getHistoryFailedWithService": "{service} 獲取文件歷史內容失敗"
             },
             "vectorCalc": {
                 "tooltip": "向量計算：編輯完成30秒後自動計算，或點擊立即計算",
                 "calculating": "計算中",
                 "pending": "待計算 {progress}%",
-                "synced": "已同步"
+                "synced": "已同步",
+                "disabled": "未啟用",
+                "disabledTooltip": "向量數據庫未啟用，點擊前往設置頁面啟用"
             },
             "export": {
                 "buttonLabel": "匯出文章",

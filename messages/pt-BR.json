@@ -1487,13 +1487,17 @@
                 "filterQuickSync": "Filtrar Sincronizações Rápidas",
                 "committedAt": "enviado em",
                 "pull": "Pull",
-                "quickSync": "Sincronização Rápida"
+                "quickSync": "Sincronização Rápida",
+                "getHistoryFailed": "Falha ao obter conteúdo do histórico do arquivo",
+                "getHistoryFailedWithService": "{service} falhou ao obter conteúdo do histórico do arquivo"
             },
             "vectorCalc": {
                 "tooltip": "Cálculo Vetorial: Cálculo automático 30s após a edição, ou clique para calcular agora",
                 "calculating": "Calculando",
                 "pending": "Pendente {progress}%",
-                "synced": "Sincronizado"
+                "synced": "Sincronizado",
+                "disabled": "Desabilitado",
+                "disabledTooltip": "Banco de dados vetorial não está habilitado, clique para ir à página de configurações para habilitar"
             },
             "export": {
                 "buttonLabel": "Exportar Artigo",

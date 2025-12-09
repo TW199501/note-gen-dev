@@ -1476,13 +1476,17 @@
                 "filterQuickSync": "过滤快速同步",
                 "committedAt": "提交于",
                 "pull": "拉取",
-                "quickSync": "快速同步"
+                "quickSync": "快速同步",
+                "getHistoryFailed": "获取文件历史内容失败",
+                "getHistoryFailedWithService": "{service} 获取文件历史内容失败"
             },
             "vectorCalc": {
                 "tooltip": "向量计算：编辑完成30秒后自动计算，或点击立即计算",
                 "calculating": "计算中",
                 "pending": "待计算 {progress}%",
-                "synced": "已同步"
+                "synced": "已同步",
+                "disabled": "未启用",
+                "disabledTooltip": "向量数据库未启用，点击前往设置页面启用"
             },
             "export": {
                 "buttonLabel": "导出文章",

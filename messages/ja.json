@@ -1418,13 +1418,17 @@
                 "filterQuickSync": "クイック同期を絞り込み",
                 "committedAt": "コミット日時",
                 "pull": "プル",
-                "quickSync": "クイック同期"
+                "quickSync": "クイック同期",
+                "getHistoryFailed": "ファイル履歴内容の取得に失敗しました",
+                "getHistoryFailedWithService": "{service} ファイル履歴内容の取得に失敗しました"
             },
             "vectorCalc": {
                 "tooltip": "ベクトル計算：編集完了30秒後に自動計算、またはクリックして即座に計算",
                 "calculating": "計算中",
                 "pending": "計算待ち {progress}%",
-                "synced": "同期済み"
+                "synced": "同期済み",
+                "disabled": "無効",
+                "disabledTooltip": "ベクトルデータベースが有効になっていません。クリックして設定ページに移動して有効にします"
             },
             "export": {
                 "buttonLabel": "記事をエクスポート",
