@@ -57,7 +57,7 @@ machine-uid = "0.5"
 # 修復安全漏洞：glib 和 xcb 只在 Linux 上需要（GTK/X11 相關）
 # 將它們放在 Linux 平台特定依賴中，避免在 Windows/macOS 上構建時出現問題
 [target.'cfg(target_os = "linux")'.dependencies]
-glib = "=0.20.12"
+glib = "=0.21.5"
 xcb = "=1.6.0"
 
 [target.'cfg(target_os = "android")'.dependencies]
